@@ -9,8 +9,10 @@ import {
 // Use environment variable for base URL
 const getBaseUrl = () => {
   const envUrl = (import.meta as any).env?.VITE_API_BASE_URL;
+  // TEMPORARY FALLBACK FOR DEBUGGING
   if (!envUrl) {
-    throw new Error('VITE_API_BASE_URL is not defined');
+    console.warn('VITE_API_BASE_URL not found, using fallback');
+    return 'https://multitask-inference-backend-812118174928.asia-south1.run.app';
   }
   return envUrl.replace(/\/$/, '');
 };
