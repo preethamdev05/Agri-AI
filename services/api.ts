@@ -7,12 +7,12 @@ import {
 } from '../types';
 
 // Use environment variable for base URL
-// The prompt requires reading VITE_API_BASE_URL and not hardcoding relative paths.
 const getBaseUrl = () => {
   const envUrl = (import.meta as any).env?.VITE_API_BASE_URL;
-  // Fallback only if strictly necessary for local dev, but prompt implies env var is key.
-  const url = envUrl || 'https://multitask-inference-backend-812118174928.asia-south1.run.app';
-  return url.replace(/\/$/, '');
+  if (!envUrl) {
+    throw new Error('VITE_API_BASE_URL is not defined');
+  }
+  return envUrl.replace(/\/$/, '');
 };
 
 const API_BASE_URL = getBaseUrl();
