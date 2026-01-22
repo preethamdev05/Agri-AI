@@ -1,0 +1,5 @@
+{
+  "name": "AgriScan AI",
+  "description": "Production-ready AI inference interface for crop health analysis using Google Cloud Run backend.",
+  "requestFramePermissions": []
+}
