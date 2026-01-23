@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PredictResponse } from '../types';
 import ProgressBar from './ui/ProgressBar';
-import { CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Sprout, Bug, Clock, Info } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Sprout, Bug, Clock, Activity, ArrowRight } from 'lucide-react';
 import Button from './ui/Button';
 
 interface AnalysisResultProps {
@@ -11,151 +11,146 @@ interface AnalysisResultProps {
 }
 
 const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onRetry }) => {
-  const [showDetails, setShowDetails] = useState(false);
+  const [showDetails, setShowDetails] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Decoupled logic: State is derived from confidence, not label string.
-  // We assume > 0.8 is "high confidence" (Green/Success-like), < 0.5 is "low confidence" (Amber/Warning).
-  // The actual label text is treated as opaque.
   const isHighConfidence = data.health.confidence >= 0.7;
+  const isHealthy = data.health.label.toLowerCase() === 'healthy';
   const confidencePercent = Math.round(data.health.confidence * 100);
 
-  // Focus management: Shift focus to container on mount
+  // Focus management
   useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.focus();
-    }
+    containerRef.current?.focus();
   }, []);
 
   return (
     <motion.div 
       ref={containerRef}
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full space-y-4 outline-none"
+      className="w-full space-y-6 outline-none"
       tabIndex={-1}
-      role="region"
-      aria-label="Analysis Results"
     >
-      {/* Primary Result Card */}
+      {/* Primary Status Card */}
       <div className={`
-        relative overflow-hidden rounded-lg border-2 p-6
-        ${isHighConfidence ? 'border-emerald-100 bg-emerald-50/50' : 'border-amber-100 bg-amber-50/50'}
+        relative overflow-hidden rounded-2xl border bg-card p-1 shadow-sm
+        ${isHealthy ? 'border-emerald-200/50 shadow-emerald-500/5' : 'border-amber-200/50 shadow-amber-500/5'}
       `}>
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Analysis Result
-            </h3>
-            <div className="flex items-center gap-2">
-              {isHighConfidence ? (
-                <CheckCircle2 className="h-8 w-8 text-emerald-600" aria-hidden="true" />
-              ) : (
-                <AlertTriangle className="h-8 w-8 text-amber-600" aria-hidden="true" />
-              )}
-              <span className={`text-3xl font-bold tracking-tight ${isHighConfidence ? 'text-emerald-700' : 'text-amber-700'}`}>
-                {data.health.label}
-              </span>
+        <div className={`
+          rounded-xl p-8 
+          ${isHealthy ? 'bg-gradient-to-br from-emerald-50/80 to-emerald-100/30' : 'bg-gradient-to-br from-amber-50/80 to-amber-100/30'}
+        `}>
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80">
+                  Diagnostic Result
+                </h3>
+                <div className="flex items-center gap-3">
+                  {isHealthy ? (
+                    <div className="rounded-full bg-emerald-100 p-1 text-emerald-600 ring-4 ring-emerald-50">
+                       <CheckCircle2 className="h-8 w-8" />
+                    </div>
+                  ) : (
+                    <div className="rounded-full bg-amber-100 p-1 text-amber-600 ring-4 ring-amber-50">
+                       <AlertTriangle className="h-8 w-8" />
+                    </div>
+                  )}
+                  <span className={`text-4xl font-extrabold tracking-tight ${isHealthy ? 'text-emerald-950' : 'text-amber-950'}`}>
+                    {data.health.label}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4 text-sm">
+                 <div className="px-3 py-1 rounded-full bg-white/60 border border-black/5 backdrop-blur font-medium text-foreground/80">
+                   {confidencePercent}% Confidence
+                 </div>
+                 <div className="flex items-center gap-1.5 text-muted-foreground">
+                   <Clock className="h-3.5 w-3.5" />
+                   <span>{data.processing_time_ms ? `${data.processing_time_ms.toFixed(0)}ms` : '< 50ms'}</span>
+                 </div>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Confidence Level: <span className="font-medium text-foreground">{confidencePercent}%</span>
-              <span className="sr-only">Probability</span>
-            </p>
           </div>
-          
-          <div className="text-right">
-             <div 
-               className="inline-flex items-center rounded-full border bg-background px-2.5 py-0.5 text-xs font-semibold text-foreground shadow-sm"
-               title={`Processing time: ${data.processing_time_ms} milliseconds`}
-             >
-                <Clock className="mr-1 h-3 w-3" aria-hidden="true" />
-                {data.processing_time_ms ? `${data.processing_time_ms}ms` : '<1s'}
-                <span className="sr-only">processed in {data.processing_time_ms} milliseconds</span>
+
+          <div className="mt-8">
+             <div className="flex justify-between text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
+                <span>Model Certainty</span>
+                <span>{data.health.confidence.toFixed(4)}</span>
+             </div>
+             <ProgressBar 
+               value={data.health.confidence} 
+               colorClass={isHealthy ? 'bg-emerald-500' : 'bg-amber-500'}
+               showValue={false}
+               height="h-3"
+             />
+          </div>
+        </div>
+      </div>
+
+      {/* Metrics Grid */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Crop Card */}
+        <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4 transition-all hover:shadow-md">
+           <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
+              <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+                <Sprout size={18} />
+              </div>
+              <h4 className="font-semibold text-foreground">Crop Type</h4>
+           </div>
+           
+           <div className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-bold text-foreground capitalize">
+                  {data.crop.label}
+                </span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  {(data.crop.confidence * 100).toFixed(1)}%
+                </span>
+              </div>
+              <ProgressBar value={data.crop.confidence} colorClass="bg-blue-500" height="h-2" showValue={false} />
+           </div>
+        </div>
+
+        {/* Pathology Card */}
+        {data.disease ? (
+          <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4 transition-all hover:shadow-md">
+             <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
+                <div className="p-2 rounded-lg bg-rose-50 text-rose-600">
+                  <Bug size={18} />
+                </div>
+                <h4 className="font-semibold text-foreground">Pathology</h4>
+             </div>
+             
+             <div className="space-y-3">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-2xl font-bold text-foreground capitalize leading-none">
+                    {data.disease.label.replace(/_/g, ' ')}
+                  </span>
+                  <span className="text-sm font-medium text-muted-foreground">
+                    {(data.disease.confidence * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <ProgressBar value={data.disease.confidence} colorClass="bg-rose-500" height="h-2" showValue={false} />
              </div>
           </div>
-        </div>
-
-        <div className="mt-6" aria-hidden="true">
-           <ProgressBar 
-             value={data.health.confidence} 
-             colorClass={isHighConfidence ? 'bg-emerald-500' : 'bg-amber-500'}
-             showValue={false}
-           />
-        </div>
-      </div>
-
-      {/* Collapsible Secondary Fields */}
-      <div className="rounded-lg border bg-card shadow-sm">
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className="flex w-full items-center justify-between p-4 text-sm font-medium hover:bg-muted/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset"
-          aria-expanded={showDetails}
-          aria-controls="details-section"
-        >
-          <div className="flex items-center gap-2">
-            <Info size={16} />
-            <span>Detailed Inference Metrics</span>
+        ) : (
+          <div className="rounded-xl border bg-card/50 p-5 shadow-sm flex flex-col items-center justify-center text-center space-y-2 text-muted-foreground dashed-border">
+             <Activity className="h-8 w-8 opacity-20" />
+             <p className="text-sm font-medium">No active pathology detected</p>
           </div>
-          {showDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
-        
-        <AnimatePresence>
-          {showDetails && (
-            <motion.div
-              id="details-section"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="grid gap-6 border-t p-6 md:grid-cols-2">
-                {/* Crop Detail */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Sprout className="h-4 w-4" aria-hidden="true" />
-                    <span>Crop Identification</span>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-lg font-semibold capitalize">{data.crop.label}</span>
-                      <span className="text-sm text-muted-foreground">{(data.crop.confidence * 100).toFixed(0)}%</span>
-                    </div>
-                    <ProgressBar value={data.crop.confidence} colorClass="bg-blue-500" showValue={false} />
-                  </div>
-                </div>
-
-                {/* Disease Detail - Conditional */}
-                {data.disease && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Bug className="h-4 w-4" aria-hidden="true" />
-                      <span>Pathology Detection</span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-lg font-semibold capitalize">
-                          {data.disease.label.replace(/_/g, ' ')}
-                        </span>
-                        <span className="text-sm text-muted-foreground">{(data.disease.confidence * 100).toFixed(0)}%</span>
-                      </div>
-                      <ProgressBar 
-                        value={data.disease.confidence} 
-                        colorClass="bg-rose-500" 
-                        showValue={false} 
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        )}
       </div>
 
-      <div className="flex justify-center pt-4">
-        <Button variant="outline" onClick={onRetry}>
-          Analyze Another Image
+      <div className="flex justify-center pt-6">
+        <Button 
+          variant="outline" 
+          onClick={onRetry}
+          className="group px-6 h-11 border-border/60 hover:bg-secondary/50"
+        >
+          <span>Analyze Another Sample</span>
+          <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
         </Button>
       </div>
     </motion.div>
