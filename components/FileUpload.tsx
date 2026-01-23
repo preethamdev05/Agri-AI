@@ -106,6 +106,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
               tabIndex={disabled ? -1 : 0}
               aria-label="Upload image dropzone"
               aria-disabled={disabled}
+              aria-invalid={!!error}
+              aria-errormessage={error ? "upload-error-msg" : undefined}
             >
               <input
                 ref={inputRef}
@@ -114,6 +116,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 accept="image/*"
                 onChange={handleChange}
                 disabled={disabled}
+                aria-hidden="true"
               />
               
               <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-6 space-y-4">
@@ -148,6 +151,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
               <motion.div 
                 initial={{ opacity: 0, height: 0 }} 
                 animate={{ opacity: 1, height: 'auto' }}
+                id="upload-error-msg"
                 className="text-sm text-destructive font-medium flex items-center justify-center gap-2"
                 role="alert"
               >
@@ -168,7 +172,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                {previewUrl ? (
                  <img 
                    src={previewUrl} 
-                   alt="Preview"
+                   alt="Preview of selected file"
                    className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105" 
                  />
                ) : (
@@ -198,7 +202,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 onClick={onClear}
                 disabled={disabled}
                 className="h-9 w-9 p-0 rounded-full text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/5 transition-colors"
-                title="Remove image"
+                aria-label="Remove selected image"
               >
                 <X size={16} />
               </Button>
