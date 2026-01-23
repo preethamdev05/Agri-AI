@@ -14,6 +14,7 @@ interface DialogProps {
 
 const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, title, children, description }) => {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape key
   useEffect(() => {
@@ -23,8 +24,16 @@ const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, title, children, descr
 
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
-      // Lock body scroll
       document.body.style.overflow = 'hidden';
+      
+      // Focus Trap Logic
+      const focusableElements = contentRef.current?.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      
+      if (focusableElements && focusableElements.length > 0) {
+        (focusableElements[0] as HTMLElement).focus();
+      }
     }
 
     return () => {
@@ -62,7 +71,7 @@ const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, title, children, descr
 
           {/* Content */}
           <motion.div
-            ref={overlayRef}
+            ref={contentRef}
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -85,7 +94,7 @@ const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, title, children, descr
                 variant="outline"
                 size="sm"
                 onClick={onClose}
-                className="h-8 w-8 p-0 rounded-full opacity-70 hover:opacity-100"
+                className="h-8 w-8 p-0 rounded-full opacity-70 hover:opacity-100 focus:ring-2 focus:ring-primary"
                 aria-label="Close dialog"
               >
                 <X size={16} />
