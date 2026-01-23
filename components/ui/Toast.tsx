@@ -45,7 +45,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>
       {children}
-      <div className="fixed bottom-0 right-0 z-[100] flex flex-col gap-2 p-4 sm:max-w-[420px] w-full pointer-events-none">
+      <div className="fixed bottom-0 right-0 flex flex-col gap-2 p-4 sm:max-w-[420px] w-full pointer-events-none" style={{ zIndex: 9999 }}>
         <AnimatePresence mode="popLayout">
           {toasts.map((toast) => (
             <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
@@ -63,19 +63,26 @@ const ToastItem: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({
     info: <Info className="h-5 w-5 text-blue-500" />,
   };
 
+  const role = toast.type === 'error' ? 'alert' : 'status';
+  const ariaLive = toast.type === 'error' ? 'assertive' : 'polite';
+
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 50, scale: 0.3 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-      className="pointer-events-auto flex items-start gap-3 w-full rounded-lg border bg-background p-4 shadow-lg ring-1 ring-black/5"
+      className="group pointer-events-auto flex items-start gap-3 w-full rounded-lg border bg-background p-4 shadow-lg ring-1 ring-black/5"
+      role={role}
+      aria-live={ariaLive}
+      aria-atomic="true"
     >
-      <div className="mt-0.5 shrink-0">{icons[toast.type]}</div>
+      <div className="mt-0.5 shrink-0" aria-hidden="true">{icons[toast.type]}</div>
       <div className="flex-1 text-sm font-medium text-foreground">{toast.message}</div>
       <button
         onClick={() => onRemove(toast.id)}
-        className="shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+        className="shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100"
+        aria-label="Close notification"
       >
         <X size={14} />
       </button>
