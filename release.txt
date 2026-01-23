@@ -1,0 +1,3 @@
+Release v1.0-cloudrun-stable: Architecture Frozen.
+- Frontend: Static SPA (Vite+React), VITE_API_BASE_URL injection.
+- Backend: Cloud Run FastAPI, CPU-only TF, Env-based CORS.
