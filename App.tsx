@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query';
-import { WifiOff, AlertCircle, Sprout, Sun, Moon, Loader2 } from 'lucide-react';
+import { WifiOff, AlertCircle, Sprout, Sun, Moon, Loader2, History, Languages } from 'lucide-react';
 import { checkHealth, analyzeImage } from './services/api';
 import { compressImage } from './utils/imageOptimizer';
 import { ThemeProvider, useTheme } from './components/ThemeProvider';
+import { I18nProvider, useI18n } from './components/I18nProvider';
 import FileUpload from './components/FileUpload';
 import AnalysisResult from './components/AnalysisResult';
 import Button from './components/ui/Button';
 import MetadataViewer from './components/MetadataViewer';
+import EmptyState from './components/ui/EmptyState';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Register Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(error => {
+      console.log('SW registration failed:', error);
+    });
+  });
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,10 +48,29 @@ function ThemeToggle() {
   );
 }
 
+function LangToggle() {
+  const { language, setLanguage } = useI18n();
+  const nextLang = language === 'en' ? 'es' : language === 'es' ? 'hi' : 'en';
+  
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => setLanguage(nextLang)}
+      className="h-9 w-12 rounded-full border-border/50 text-xs font-bold"
+      aria-label="Toggle language"
+    >
+      {language.toUpperCase()}
+    </Button>
+  );
+}
+
 function AgriScanApp() {
+  const { t } = useI18n();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   
   // 1. Health Check
   const { data: isServiceAvailable, isLoading: isHealthLoading } = useQuery({
@@ -59,13 +89,18 @@ function AgriScanApp() {
   const analysisMutation = useMutation({
     mutationFn: async (file: File) => {
       try {
-        setLoadingStep('Optimizing image...');
+        setLoadingStep(t('btn.optimizing'));
         const compressedFile = await compressImage(file);
         
-        setLoadingStep('Uploading to inference engine...');
+        setLoadingStep(t('btn.uploading'));
         const result = await analyzeImage(compressedFile);
         
-        setLoadingStep('Processing results...');
+        setLoadingStep(t('btn.processing'));
+        // Save to history (mock)
+        const historyItem = { date: new Date().toISOString(), result };
+        const history = JSON.parse(localStorage.getItem('scan_history') || '[]');
+        localStorage.setItem('scan_history', JSON.stringify([historyItem, ...history].slice(0, 10)));
+        
         return result;
       } finally {
         setLoadingStep(null);
@@ -104,12 +139,13 @@ function AgriScanApp() {
               <Sprout size={20} strokeWidth={2.5} />
             </div>
             <div>
-              <h1 className="text-lg font-bold tracking-tight leading-none">AgriScan AI</h1>
-              <p className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase mt-0.5">Production Engine</p>
+              <h1 className="text-lg font-bold tracking-tight leading-none">{t('app.title')}</h1>
+              <p className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase mt-0.5">{t('app.subtitle')}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+             <LangToggle />
              <ThemeToggle />
             {isHealthLoading ? (
               <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30 animate-pulse" />
@@ -119,12 +155,12 @@ function AgriScanApp() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                <span className="hidden sm:inline">System Online</span>
+                <span className="hidden sm:inline">{t('status.online')}</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/5 px-3 py-1.5 rounded-full border border-destructive/10 shadow-sm">
                 <WifiOff size={12} />
-                <span>Offline</span>
+                <span>{t('status.offline')}</span>
               </div>
             )}
           </div>
@@ -135,9 +171,9 @@ function AgriScanApp() {
       <main className="container mx-auto max-w-2xl px-4 py-12 space-y-8">
         
         <div className="text-center space-y-2 mb-8">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Crop Disease Analysis</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{t('hero.title')}</h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            Upload a clear image of a crop leaf to detect potential diseases.
+            {t('hero.desc')}
           </p>
         </div>
 
@@ -172,10 +208,10 @@ function AgriScanApp() {
                    {analysisMutation.isPending ? (
                      <div className="flex items-center gap-2">
                        <Loader2 className="h-5 w-5 animate-spin" />
-                       <span>{loadingStep || 'Processing...'}</span>
+                       <span>{loadingStep || t('btn.analyzing')}</span>
                      </div>
                    ) : (
-                     'Run Diagnostics'
+                     t('btn.upload')
                    )}
                  </Button>
               </div>
@@ -185,25 +221,15 @@ function AgriScanApp() {
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
-                  className="rounded-xl border border-destructive/20 bg-destructive/5 p-4"
+                  className="pt-2"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-full bg-destructive/10 text-destructive shrink-0">
-                      <AlertCircle className="h-5 w-5" />
-                    </div>
-                    <div className="text-sm pt-0.5">
-                      <h4 className="font-semibold text-destructive">Analysis Failed</h4>
-                      <p className="text-muted-foreground mt-1">
-                        {analysisMutation.error instanceof Error ? analysisMutation.error.message : "An unknown error occurred during inference."}
-                      </p>
-                      <button 
-                        onClick={handleAnalyze}
-                        className="mt-3 text-xs font-semibold text-destructive underline decoration-destructive/30 underline-offset-4 hover:text-destructive/80"
-                      >
-                        Retry Analysis
-                      </button>
-                    </div>
-                  </div>
+                  <EmptyState 
+                    icon={AlertCircle}
+                    title="Analysis Failed"
+                    description={analysisMutation.error instanceof Error ? analysisMutation.error.message : "An unknown error occurred during inference."}
+                    actionLabel="Retry Analysis"
+                    onAction={handleAnalyze}
+                  />
                 </motion.div>
               )}
             </motion.div>
@@ -222,6 +248,24 @@ function AgriScanApp() {
             </motion.div>
           )}
         </AnimatePresence>
+        
+        {/* History Toggle (Simple implementation) */}
+        <div className="flex justify-center pt-8 border-t">
+             <button 
+               onClick={() => setShowHistory(!showHistory)}
+               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+             >
+               <History size={16} />
+               <span>{showHistory ? 'Hide History' : t('history.title')}</span>
+             </button>
+        </div>
+        
+        {showHistory && (
+           <div className="space-y-2 animate-in slide-in-from-bottom-2 fade-in">
+              <p className="text-center text-xs text-muted-foreground italic">{t('history.empty')}</p>
+              {/* Mock placeholder, actual list would map localStorage items */}
+           </div>
+        )}
 
       </main>
 
@@ -234,7 +278,7 @@ function AgriScanApp() {
                <p className="text-xs text-muted-foreground">
                 &copy; {new Date().getFullYear()} AgriScan AI. 
                 <span className="mx-2">•</span>
-                v2.5.0-prod
+                v2.6.0-prod
               </p>
             </div>
           </div>
@@ -246,10 +290,12 @@ function AgriScanApp() {
 
 export default function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="agri-scan-theme">
-      <QueryClientProvider client={queryClient}>
-        <AgriScanApp />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <I18nProvider>
+      <ThemeProvider defaultTheme="system" storageKey="agri-scan-theme">
+        <QueryClientProvider client={queryClient}>
+          <AgriScanApp />
+        </QueryClientProvider>
+      </ThemeProvider>
+    </I18nProvider>
   );
 }
