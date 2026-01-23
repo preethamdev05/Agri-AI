@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchMetadata } from '../services/api';
-import { Info, X, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Button from './ui/Button';
+import Dialog from './ui/Dialog';
+import Skeleton from './ui/Skeleton';
+import { Info, AlertCircle } from 'lucide-react';
 
 const MetadataViewer: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,65 +24,78 @@ const MetadataViewer: React.FC = () => {
         Supported Models & Semantics
       </button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-2xl max-h-[80vh] flex flex-col rounded-lg border bg-background shadow-lg"
-            >
-              <div className="flex items-center justify-between border-b p-4">
-                <div className="flex items-center gap-2">
-                  <Info className="h-4 w-4 text-primary" />
-                  <h2 className="text-lg font-semibold">Model Capabilities</h2>
+      <Dialog 
+        isOpen={isOpen} 
+        onClose={() => setIsOpen(false)} 
+        title="Model Capabilities"
+        description="Current inference engine specifications and class mappings."
+      >
+        <div className="min-h-[200px]">
+          {isLoading ? (
+            <div className="grid gap-8 md:grid-cols-2">
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-32" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-5/6" />
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setIsOpen(false)} className="h-8 w-8 p-0">
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
-              
-              <div className="flex-1 overflow-y-auto p-6">
-                {isLoading ? (
-                  <div className="flex h-32 items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                  </div>
-                ) : isError ? (
-                  <div className="text-center text-sm text-destructive">
-                    Failed to load model metadata.
-                  </div>
-                ) : data ? (
-                  <div className="grid gap-8 md:grid-cols-2">
-                    <div>
-                      <h3 className="mb-3 font-medium text-foreground">Supported Crops</h3>
-                      <ul className="space-y-2">
-                        {data.crops.map((crop) => (
-                          <li key={crop.id} className="text-sm text-muted-foreground flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                            <span className="capitalize">{crop.label}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <h3 className="mb-3 font-medium text-foreground">Detectable Pathologies</h3>
-                      <ul className="space-y-2">
-                        {data.diseases.map((disease) => (
-                          <li key={disease.id} className="text-sm text-muted-foreground flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                            <span className="capitalize">{disease.label.replace(/_/g, ' ')}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                ) : null}
+              <div className="space-y-3">
+                <Skeleton className="h-5 w-40" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-4/5" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center text-destructive">
+              <AlertCircle className="mb-2 h-8 w-8" />
+              <p className="text-sm font-medium">Failed to load model metadata.</p>
+              <p className="text-xs opacity-70">Please check your network connection.</p>
+            </div>
+          ) : data ? (
+            <div className="grid gap-8 md:grid-cols-2">
+              <div>
+                <h3 className="mb-3 flex items-center gap-2 font-medium text-foreground">
+                  <Info className="h-4 w-4 text-emerald-500" />
+                  Supported Crops
+                </h3>
+                <ul className="space-y-2">
+                  {data.crops.map((crop) => (
+                    <li 
+                      key={crop.id} 
+                      className="group flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 transition-transform group-hover:scale-125" />
+                      <span className="capitalize">{crop.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h3 className="mb-3 flex items-center gap-2 font-medium text-foreground">
+                  <Info className="h-4 w-4 text-amber-500" />
+                  Detectable Pathologies
+                </h3>
+                <ul className="space-y-2">
+                  {data.diseases.map((disease) => (
+                    <li 
+                      key={disease.id} 
+                      className="group flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 transition-transform group-hover:scale-125" />
+                      <span className="capitalize">{disease.label.replace(/_/g, ' ')}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </Dialog>
     </>
   );
 };
