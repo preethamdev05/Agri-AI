@@ -13,6 +13,7 @@ interface FileUploadProps {
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+// Optimized: Memoized to prevent re-renders when parent state updates (e.g. health check)
 const FileUpload: React.FC<FileUploadProps> = ({ 
   onFileSelect, 
   onClear, 
@@ -214,4 +215,4 @@ const FileUpload: React.FC<FileUploadProps> = ({
   );
 };
 
-export default FileUpload;
+export default React.memo(FileUpload);
