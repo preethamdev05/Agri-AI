@@ -1,17 +1,14 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query';
-import { Sprout, WifiOff, AlertCircle, Moon, Sun, Loader2 } from 'lucide-react';
+import { WifiOff, AlertCircle, Sprout, Sun, Moon, Loader2 } from 'lucide-react';
 import { checkHealth, analyzeImage } from './services/api';
+import { compressImage } from './utils/imageOptimizer';
+import { ThemeProvider, useTheme } from './components/ThemeProvider';
 import FileUpload from './components/FileUpload';
+import AnalysisResult from './components/AnalysisResult';
 import Button from './components/ui/Button';
-import Skeleton from './components/ui/Skeleton';
+import MetadataViewer from './components/MetadataViewer';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ThemeProvider, useTheme } from './context/ThemeContext';
-import { ToastProvider, useToast } from './components/ui/Toast';
-
-// Lazy load heavy components
-const AnalysisResult = React.lazy(() => import('./components/AnalysisResult'));
-const MetadataViewer = React.lazy(() => import('./components/MetadataViewer'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,17 +21,18 @@ const queryClient = new QueryClient({
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-
   return (
     <Button
       variant="outline"
       size="sm"
-      className="h-9 w-9 p-0 rounded-full border-border/60 hover:bg-muted"
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      className="h-9 w-9 p-0 rounded-full border-border/50 hover:bg-muted"
       aria-label="Toggle theme"
     >
-      <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      <div className="relative h-4 w-4">
+        <Sun className="absolute inset-0 h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+        <Moon className="absolute inset-0 h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      </div>
     </Button>
   );
 }
@@ -42,7 +40,7 @@ function ThemeToggle() {
 function AgriScanApp() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const { addToast } = useToast();
+  const [loadingStep, setLoadingStep] = useState<string | null>(null);
   
   // 1. Health Check
   const { data: isServiceAvailable, isLoading: isHealthLoading } = useQuery({
@@ -51,25 +49,28 @@ function AgriScanApp() {
     refetchInterval: 30000,
   });
 
-  // Cleanup preview URL
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
 
-  // 2. Analysis Mutation
+  // 2. Analysis Mutation with Stepped Loading
   const analysisMutation = useMutation({
-    mutationFn: analyzeImage,
-    onError: (error) => {
-      addToast(
-        error instanceof Error ? error.message : "Analysis failed. Please try again.",
-        'error'
-      );
+    mutationFn: async (file: File) => {
+      try {
+        setLoadingStep('Optimizing image...');
+        const compressedFile = await compressImage(file);
+        
+        setLoadingStep('Uploading to inference engine...');
+        const result = await analyzeImage(compressedFile);
+        
+        setLoadingStep('Processing results...');
+        return result;
+      } finally {
+        setLoadingStep(null);
+      }
     },
-    onSuccess: () => {
-      addToast("Analysis complete.", 'success');
-    }
   });
 
   const handleFileSelect = (file: File) => {
@@ -96,7 +97,7 @@ function AgriScanApp() {
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 transition-colors duration-300">
       
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto max-w-5xl px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-primary/10 text-primary">
@@ -104,29 +105,28 @@ function AgriScanApp() {
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight leading-none">AgriScan AI</h1>
-              <p className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase mt-0.5">Production Inference Engine</p>
+              <p className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase mt-0.5">Production Engine</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
+             <ThemeToggle />
             {isHealthLoading ? (
               <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30 animate-pulse" />
             ) : isServiceAvailable ? (
-              <div className="hidden sm:flex items-center gap-2 text-xs font-medium text-emerald-600 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 shadow-sm">
+              <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-100 dark:border-emerald-500/20 shadow-sm transition-colors">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
-                <span>System Online</span>
+                <span className="hidden sm:inline">System Online</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/10 px-3 py-1.5 rounded-full border border-destructive/20 shadow-sm">
+              <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/5 px-3 py-1.5 rounded-full border border-destructive/10 shadow-sm">
                 <WifiOff size={12} />
-                <span className="hidden sm:inline">System Offline</span>
+                <span>Offline</span>
               </div>
             )}
-            
-            <ThemeToggle />
           </div>
         </div>
       </header>
@@ -137,7 +137,7 @@ function AgriScanApp() {
         <div className="text-center space-y-2 mb-8">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Crop Disease Analysis</h2>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            Upload a clear image of a crop leaf to detect potential diseases using our multi-task deep learning model.
+            Upload a clear image of a crop leaf to detect potential diseases.
           </p>
         </div>
 
@@ -165,16 +165,22 @@ function AgriScanApp() {
                  <Button 
                    size="lg"
                    variant="primary"
-                   className="w-full shadow-sm hover:shadow-md transition-all h-14 text-base font-semibold rounded-xl"
+                   className="w-full shadow-sm hover:shadow-md transition-all h-14 text-base font-semibold rounded-xl relative overflow-hidden"
                    onClick={handleAnalyze} 
                    disabled={!selectedFile || analysisMutation.isPending}
-                   isLoading={analysisMutation.isPending}
                  >
-                   {analysisMutation.isPending ? 'Analyzing Crop Health...' : 'Run Diagnostics'}
+                   {analysisMutation.isPending ? (
+                     <div className="flex items-center gap-2">
+                       <Loader2 className="h-5 w-5 animate-spin" />
+                       <span>{loadingStep || 'Processing...'}</span>
+                     </div>
+                   ) : (
+                     'Run Diagnostics'
+                   )}
                  </Button>
               </div>
 
-              {/* Error State - Kept for persistent visibility */}
+              {/* Error State */}
               {analysisMutation.isError && (
                 <motion.div 
                   initial={{ opacity: 0, height: 0 }}
@@ -209,12 +215,10 @@ function AgriScanApp() {
               transition={{ type: "spring", duration: 0.5 }}
               className="space-y-6"
             >
-               <Suspense fallback={<div className="h-96 w-full rounded-xl bg-muted/50 animate-pulse" />}>
-                  <AnalysisResult 
-                    data={analysisMutation.data} 
-                    onRetry={handleClear} 
-                  />
-               </Suspense>
+              <AnalysisResult 
+                data={analysisMutation.data} 
+                onRetry={handleClear} 
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -222,17 +226,13 @@ function AgriScanApp() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto border-t bg-card/50">
+      <footer className="mt-auto border-t bg-card/30">
         <div className="container mx-auto px-4 py-10">
           <div className="max-w-2xl mx-auto space-y-6 text-center">
-            <Suspense fallback={<Skeleton className="h-4 w-48 mx-auto" />}>
-              <MetadataViewer />
-            </Suspense>
+            <MetadataViewer />
             <div className="pt-4 border-t border-border/50">
                <p className="text-xs text-muted-foreground">
                 &copy; {new Date().getFullYear()} AgriScan AI. 
-                <span className="mx-2">•</span>
-                Powered by Multi-Task EfficientNet
                 <span className="mx-2">•</span>
                 v2.5.0-prod
               </p>
@@ -247,11 +247,9 @@ function AgriScanApp() {
 export default function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="agri-scan-theme">
-      <ToastProvider>
-        <QueryClientProvider client={queryClient}>
-          <AgriScanApp />
-        </QueryClientProvider>
-      </ToastProvider>
+      <QueryClientProvider client={queryClient}>
+        <AgriScanApp />
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }
