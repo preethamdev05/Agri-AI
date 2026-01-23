@@ -1,0 +1,4 @@
+## 2024-05-22 - Exposed Secrets in Build Config
+**Vulnerability:** The `vite.config.ts` file contained a `define` block that explicitly injected `env.GEMINI_API_KEY` into the client-side code as `process.env.API_KEY` and `process.env.GEMINI_API_KEY`. This meant that if the build environment contained this key, it would be embedded in the public frontend bundle if referenced, leading to a critical secret leak.
+**Learning:** Developers sometimes use `define` or similar build tool features to polyfill `process.env`, not realizing that this exposes the values to the client browser. Even unused definitions create a risk of accidental usage and exposure.
+**Prevention:** Strictly follow the convention of only exposing environment variables prefixed with `VITE_` (or equivalent for other frameworks). Never manually inject secrets via `define`. Perform regular audits of build configurations.
