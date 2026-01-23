@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query';
-import { WifiOff, AlertCircle, Sprout, Sun, Moon, Loader2, History, Languages } from 'lucide-react';
+import { WifiOff, AlertCircle, Sprout, Sun, Moon, Loader2, History } from 'lucide-react';
 import { checkHealth, analyzeImage } from './services/api';
 import { compressImage } from './utils/imageOptimizer';
 import { mapApiErrorToMessage } from './utils/errorMapper';
@@ -8,17 +8,20 @@ import { ThemeProvider, useTheme } from './components/ThemeProvider';
 import { I18nProvider, useI18n } from './components/I18nProvider';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import FileUpload from './components/FileUpload';
-import AnalysisResult from './components/AnalysisResult';
 import Button from './components/ui/Button';
 import MetadataViewer from './components/MetadataViewer';
 import EmptyState from './components/ui/EmptyState';
+import Skeleton from './components/ui/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Lazy load heavy result component
+const AnalysisResult = React.lazy(() => import('./components/AnalysisResult'));
 
 // Register Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(error => {
-      console.log('SW registration failed:', error);
+      console.warn('SW registration failed:', error);
     });
   });
 }
@@ -40,7 +43,7 @@ function ThemeToggle() {
       size="sm"
       onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       className="h-9 w-9 p-0 rounded-full border-border/50 hover:bg-muted"
-      aria-label="Toggle theme"
+      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
     >
       <div className="relative h-4 w-4">
         <Sun className="absolute inset-0 h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
@@ -60,7 +63,7 @@ function LangToggle() {
       size="sm"
       onClick={() => setLanguage(nextLang)}
       className="h-9 w-12 rounded-full border-border/50 text-xs font-bold"
-      aria-label="Toggle language"
+      aria-label={`Switch language to ${nextLang.toUpperCase()}`}
     >
       {language.toUpperCase()}
     </Button>
@@ -82,6 +85,7 @@ function AgriScanApp() {
     refetchInterval: 30000,
   });
 
+  // Cleanup effect
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -114,9 +118,8 @@ function AgriScanApp() {
     },
     onError: (error) => {
       const { message, severity } = mapApiErrorToMessage(error);
-      // We still show the EmptyState for the main error, but we can also toast warnings
       if (severity === 'warning') {
-         addToast(message, 'info'); // Using info for warning-like toasts
+         addToast(message, 'info');
       }
     }
   });
@@ -142,7 +145,7 @@ function AgriScanApp() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 transition-colors duration-300 flex flex-col">
       
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -161,7 +164,7 @@ function AgriScanApp() {
              <LangToggle />
              <ThemeToggle />
             {isHealthLoading ? (
-              <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30 animate-pulse" />
+              <Skeleton className="h-6 w-20 rounded-full" />
             ) : isServiceAvailable ? (
               <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-100 dark:border-emerald-500/20 shadow-sm transition-colors">
                 <span className="relative flex h-2 w-2">
@@ -181,7 +184,7 @@ function AgriScanApp() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto max-w-2xl px-4 py-12 space-y-8">
+      <main className="flex-1 container mx-auto max-w-2xl px-4 py-12 space-y-8" role="main">
         
         <div className="text-center space-y-2 mb-8">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{t('hero.title')}</h2>
@@ -217,6 +220,7 @@ function AgriScanApp() {
                    className="w-full shadow-sm hover:shadow-md transition-all h-14 text-base font-semibold rounded-xl relative overflow-hidden"
                    onClick={handleAnalyze} 
                    disabled={!selectedFile || analysisMutation.isPending}
+                   aria-busy={analysisMutation.isPending}
                  >
                    {analysisMutation.isPending ? (
                      <div className="flex items-center gap-2">
@@ -254,19 +258,30 @@ function AgriScanApp() {
               transition={{ type: "spring", duration: 0.5 }}
               className="space-y-6"
             >
-              <AnalysisResult 
-                data={analysisMutation.data} 
-                onRetry={handleClear} 
-              />
+              <Suspense fallback={
+                <div className="space-y-6">
+                  <Skeleton className="h-64 w-full rounded-2xl" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-32 rounded-xl" />
+                    <Skeleton className="h-32 rounded-xl" />
+                  </div>
+                </div>
+              }>
+                <AnalysisResult 
+                  data={analysisMutation.data} 
+                  onRetry={handleClear} 
+                />
+              </Suspense>
             </motion.div>
           )}
         </AnimatePresence>
         
-        {/* History Toggle (Simple implementation) */}
+        {/* History Toggle */}
         <div className="flex justify-center pt-8 border-t">
              <button 
                onClick={() => setShowHistory(!showHistory)}
                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+               aria-expanded={showHistory}
              >
                <History size={16} />
                <span>{showHistory ? 'Hide History' : t('history.title')}</span>
@@ -275,7 +290,6 @@ function AgriScanApp() {
         
         {showHistory && (
            <div className="space-y-2 animate-in slide-in-from-bottom-2 fade-in">
-              {/* This would be mapped from actual history state in a real implementation */}
               <p className="text-center text-xs text-muted-foreground italic">{t('history.empty')}</p>
            </div>
         )}
@@ -283,7 +297,7 @@ function AgriScanApp() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-auto border-t bg-card/30">
+      <footer className="mt-auto border-t bg-card/30" role="contentinfo">
         <div className="container mx-auto px-4 py-10">
           <div className="max-w-2xl mx-auto space-y-6 text-center">
             <MetadataViewer />
