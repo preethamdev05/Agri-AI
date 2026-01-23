@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query';
 import { WifiOff, AlertCircle, Sprout, Sun, Moon, Loader2, History } from 'lucide-react';
 import { checkHealth, analyzeImage } from './services/api';
@@ -124,25 +124,26 @@ function AgriScanApp() {
     }
   });
 
-  const handleFileSelect = (file: File) => {
+  // Optimized: Memoized handlers to prevent child re-renders during background health checks
+  const handleFileSelect = useCallback((file: File) => {
     setSelectedFile(file);
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
     analysisMutation.reset();
-  };
+  }, [analysisMutation.reset]);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     setSelectedFile(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
     analysisMutation.reset();
-  };
+  }, [previewUrl, analysisMutation.reset]);
 
-  const handleAnalyze = () => {
+  const handleAnalyze = useCallback(() => {
     if (selectedFile) {
       analysisMutation.mutate(selectedFile);
     }
-  };
+  }, [selectedFile, analysisMutation.mutate]);
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 transition-colors duration-300 flex flex-col">

@@ -11,6 +11,7 @@ interface AnalysisResultProps {
   onRetry: () => void;
 }
 
+// Optimized: Memoized to prevent re-renders during background polling in parent
 const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onRetry }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -161,4 +162,4 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onRetry }) => {
   );
 };
 
-export default AnalysisResult;
+export default React.memo(AnalysisResult);

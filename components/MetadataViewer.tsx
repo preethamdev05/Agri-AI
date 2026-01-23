@@ -151,4 +151,4 @@ const MetadataViewer: React.FC = () => {
   );
 };
 
-export default MetadataViewer;
+export default React.memo(MetadataViewer);
