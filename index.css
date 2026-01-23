@@ -16,23 +16,23 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
 
-    /* Primary - Deep Emerald */
+    /* Primary - Deep Emerald (Trustworthy, Agricultural) */
     --primary: 158 64% 52%;
     --primary-foreground: 160 60% 98%;
 
-    /* Secondary */
+    /* Secondary - Subtle Blue-Gray */
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
-    /* Muted */
+    /* Muted - For de-emphasized text */
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    /* Accent */
+    /* Accent - For interactive elements */
     --accent: 158 64% 96%;
     --accent-foreground: 160 60% 20%;
 
-    /* Destructive */
+    /* Destructive - Red */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
@@ -44,6 +44,7 @@
     --radius: 0.75rem;
   }
 
+  /* Dark Mode Overrides */
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -54,8 +55,9 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
+    /* Primary adjusted for dark contrast */
     --primary: 158 64% 52%;
-    --primary-foreground: 160 60% 98%;
+    --primary-foreground: 144 60% 10%;
 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -84,7 +86,7 @@
   }
 }
 
-/* Custom Scrollbar for a polished feel */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -93,4 +95,9 @@
 }
 ::-webkit-scrollbar-thumb {
   @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
+}
+
+/* Accessible Focus States */
+:focus-visible {
+  @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
 }
