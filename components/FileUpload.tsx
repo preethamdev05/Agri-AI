@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useRef } from 'react';
-import { UploadCloud, Image as ImageIcon, X, AlertCircle } from 'lucide-react';
+import { UploadCloud, Image as ImageIcon, X, AlertCircle, FileUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from './ui/Button';
 
@@ -27,7 +27,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const validateAndSelect = (file: File) => {
     setError(null);
     if (!file.type.startsWith('image/')) {
-      setError('Invalid file type. Please upload an image.');
+      setError('Invalid file type. Please upload an image (JPG, PNG, WEBP).');
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
@@ -79,20 +79,23 @@ const FileUpload: React.FC<FileUploadProps> = ({
     <div className="w-full">
       <AnimatePresence mode="wait">
         {!selectedFile ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
              <motion.div
               key="dropzone"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, scale: 0.99 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.99 }}
               className={`
-                relative flex flex-col items-center justify-center w-full min-h-[300px] 
-                rounded-xl border-2 border-dashed transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
+                relative flex flex-col items-center justify-center w-full min-h-[320px] 
+                rounded-xl border-2 border-dashed transition-all duration-300 cursor-pointer 
+                focus:outline-none focus:ring-4 focus:ring-primary/10
                 ${isDragOver 
-                  ? 'border-primary bg-primary/5' 
-                  : error ? 'border-destructive/50 bg-destructive/5' : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'
+                  ? 'border-primary bg-primary/5 scale-[1.01]' 
+                  : error 
+                    ? 'border-destructive/40 bg-destructive/5' 
+                    : 'border-border/60 hover:border-primary/40 hover:bg-muted/30'
                 }
-                ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : ''}
               `}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -101,7 +104,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
               onKeyDown={!disabled ? handleKeyDown : undefined}
               role="button"
               tabIndex={disabled ? -1 : 0}
-              aria-label="Upload image dropzone. Click or drag and drop to upload."
+              aria-label="Upload image dropzone"
               aria-disabled={disabled}
             >
               <input
@@ -111,29 +114,44 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 accept="image/*"
                 onChange={handleChange}
                 disabled={disabled}
-                aria-hidden="true"
               />
               
-              <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
-                <div className={`p-4 mb-4 rounded-full ${error ? 'bg-destructive/10 text-destructive' : 'bg-secondary text-primary'}`}>
-                  {error ? <AlertCircle size={32} /> : <UploadCloud size={32} />}
+              <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-6 space-y-4">
+                <div className={`
+                  p-5 rounded-full shadow-sm transition-transform duration-300
+                  ${error ? 'bg-destructive/10 text-destructive' : 'bg-background text-primary ring-1 ring-border'}
+                  ${isDragOver ? 'scale-110' : ''}
+                `}>
+                  {error ? <AlertCircle size={36} strokeWidth={1.5} /> : <UploadCloud size={36} strokeWidth={1.5} />}
                 </div>
-                <p className="mb-2 text-lg font-medium text-foreground">
-                  <span className="font-semibold text-primary">Click to upload</span> or drag and drop
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  SVG, PNG, JPG or WEBP (max. 10MB)
-                </p>
+                
+                <div className="space-y-1">
+                  <p className="text-xl font-semibold tracking-tight text-foreground">
+                    Drop your image here
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    or click to browse from your device
+                  </p>
+                </div>
+
+                <div className="flex gap-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">
+                   <span>JPEG</span>
+                   <span>•</span>
+                   <span>PNG</span>
+                   <span>•</span>
+                   <span>WEBP</span>
+                </div>
               </div>
             </motion.div>
+            
             {error && (
               <motion.div 
                 initial={{ opacity: 0, height: 0 }} 
                 animate={{ opacity: 1, height: 'auto' }}
-                className="text-sm text-destructive font-medium flex items-center gap-2 px-1"
+                className="text-sm text-destructive font-medium flex items-center justify-center gap-2"
                 role="alert"
               >
-                <AlertCircle size={16} />
+                <AlertCircle size={14} />
                 {error}
               </motion.div>
             )}
@@ -144,28 +162,31 @@ const FileUpload: React.FC<FileUploadProps> = ({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="relative w-full overflow-hidden rounded-xl border bg-background shadow-sm"
+            className="group relative w-full overflow-hidden rounded-xl border bg-card shadow-sm ring-1 ring-border/50"
           >
-            <div className="relative aspect-video w-full bg-black/5 flex items-center justify-center overflow-hidden">
+            <div className="relative aspect-video w-full bg-secondary/30 flex items-center justify-center overflow-hidden">
                {previewUrl ? (
                  <img 
                    src={previewUrl} 
-                   alt={`Preview of ${selectedFile.name}`}
-                   className="h-full w-full object-contain" 
+                   alt="Preview"
+                   className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105" 
                  />
                ) : (
-                 <ImageIcon className="text-muted-foreground h-12 w-12" />
+                 <ImageIcon className="text-muted-foreground/40 h-16 w-16" />
                )}
+               
+               {/* Overlay for better visibility of image boundary */}
+               <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-xl pointer-events-none" />
             </div>
             
-            <div className="flex items-center justify-between p-4 bg-background">
-              <div className="flex items-center space-x-3 overflow-hidden">
-                <div className="flex-shrink-0 p-2 bg-primary/10 rounded-md text-primary">
-                  <ImageIcon size={20} aria-hidden="true" />
+            <div className="flex items-center justify-between p-4 bg-card border-t">
+              <div className="flex items-center gap-3 overflow-hidden">
+                <div className="flex-shrink-0 p-2.5 bg-primary/10 rounded-lg text-primary">
+                  <FileUp size={20} strokeWidth={2} />
                 </div>
-                <div className="truncate">
-                  <p className="text-sm font-medium truncate max-w-[200px]">{selectedFile.name}</p>
-                  <p className="text-xs text-muted-foreground">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate text-foreground">{selectedFile.name}</p>
+                  <p className="text-xs text-muted-foreground font-medium">
                     {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
@@ -176,8 +197,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 size="sm"
                 onClick={onClear}
                 disabled={disabled}
-                className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-destructive hover:border-destructive"
-                aria-label="Remove selected file"
+                className="h-9 w-9 p-0 rounded-full text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/5 transition-colors"
+                title="Remove image"
               >
                 <X size={16} />
               </Button>
