@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { PredictResponse } from '../types';
+import { isPlantHealthy, getActiveDisease, formatConfidence, formatLabel } from '../utils/domain';
 import ProgressBar from './ui/ProgressBar';
-import { CheckCircle2, AlertTriangle, ChevronDown, ChevronUp, Sprout, Bug, Clock, Activity, ArrowRight } from 'lucide-react';
 import Button from './ui/Button';
+import { CheckCircle2, AlertTriangle, Sprout, Bug, Clock, Activity, ArrowRight } from 'lucide-react';
 
 interface AnalysisResultProps {
   data: PredictResponse;
@@ -11,14 +12,14 @@ interface AnalysisResultProps {
 }
 
 const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onRetry }) => {
-  const [showDetails, setShowDetails] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  const isHighConfidence = data.health.confidence >= 0.7;
-  const isHealthy = data.health.label.toLowerCase() === 'healthy';
-  const confidencePercent = Math.round(data.health.confidence * 100);
-
-  // Focus management
+  // Use centralized domain logic
+  const healthy = isPlantHealthy(data.health.label);
+  const activeDisease = getActiveDisease(data);
+  const healthLabel = formatLabel(data.health.label);
+  
+  // Focus management for accessibility
   useEffect(() => {
     containerRef.current?.focus();
   }, []);
@@ -30,15 +31,16 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onRetry }) => {
       animate={{ opacity: 1, y: 0 }}
       className="w-full space-y-6 outline-none"
       tabIndex={-1}
+      aria-label="Analysis Results"
     >
       {/* Primary Status Card */}
       <div className={`
-        relative overflow-hidden rounded-2xl border bg-card p-1 shadow-sm
-        ${isHealthy ? 'border-emerald-200/50 shadow-emerald-500/5' : 'border-amber-200/50 shadow-amber-500/5'}
+        relative overflow-hidden rounded-2xl border p-1 shadow-sm
+        ${healthy ? 'border-emerald-200/50 bg-card shadow-emerald-500/5' : 'border-amber-200/50 bg-card shadow-amber-500/5'}
       `}>
         <div className={`
           rounded-xl p-8 
-          ${isHealthy ? 'bg-gradient-to-br from-emerald-50/80 to-emerald-100/30' : 'bg-gradient-to-br from-amber-50/80 to-amber-100/30'}
+          ${healthy ? 'bg-gradient-to-br from-emerald-50/80 to-emerald-100/30' : 'bg-gradient-to-br from-amber-50/80 to-amber-100/30'}
         `}>
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
             <div className="space-y-4">
@@ -47,7 +49,7 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onRetry }) => {
                   Diagnostic Result
                 </h3>
                 <div className="flex items-center gap-3">
-                  {isHealthy ? (
+                  {healthy ? (
                     <div className="rounded-full bg-emerald-100 p-1 text-emerald-600 ring-4 ring-emerald-50">
                        <CheckCircle2 className="h-8 w-8" />
                     </div>
@@ -56,18 +58,19 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onRetry }) => {
                        <AlertTriangle className="h-8 w-8" />
                     </div>
                   )}
-                  <span className={`text-4xl font-extrabold tracking-tight ${isHealthy ? 'text-emerald-950' : 'text-amber-950'}`}>
-                    {data.health.label}
+                  <span className={`text-3xl sm:text-4xl font-extrabold tracking-tight ${healthy ? 'text-emerald-950' : 'text-amber-950'}`}>
+                    {healthLabel}
                   </span>
                 </div>
               </div>
               
               <div className="flex items-center gap-4 text-sm">
                  <div className="px-3 py-1 rounded-full bg-white/60 border border-black/5 backdrop-blur font-medium text-foreground/80">
-                   {confidencePercent}% Confidence
+                   {formatConfidence(data.health.confidence)} Confidence
                  </div>
                  <div className="flex items-center gap-1.5 text-muted-foreground">
                    <Clock className="h-3.5 w-3.5" />
+                   {/* Backend returns float ms, display as integer */}
                    <span>{data.processing_time_ms ? `${data.processing_time_ms.toFixed(0)}ms` : '< 50ms'}</span>
                  </div>
               </div>
@@ -81,7 +84,7 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onRetry }) => {
              </div>
              <ProgressBar 
                value={data.health.confidence} 
-               colorClass={isHealthy ? 'bg-emerald-500' : 'bg-amber-500'}
+               colorClass={healthy ? 'bg-emerald-500' : 'bg-amber-500'}
                showValue={false}
                height="h-3"
              />
@@ -103,10 +106,10 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onRetry }) => {
            <div className="space-y-3">
               <div className="flex items-baseline justify-between">
                 <span className="text-2xl font-bold text-foreground capitalize">
-                  {data.crop.label}
+                  {formatLabel(data.crop.label)}
                 </span>
                 <span className="text-sm font-medium text-muted-foreground">
-                  {(data.crop.confidence * 100).toFixed(1)}%
+                  {formatConfidence(data.crop.confidence)}
                 </span>
               </div>
               <ProgressBar value={data.crop.confidence} colorClass="bg-blue-500" height="h-2" showValue={false} />
@@ -114,7 +117,7 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onRetry }) => {
         </div>
 
         {/* Pathology Card */}
-        {data.disease ? (
+        {activeDisease ? (
           <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4 transition-all hover:shadow-md">
              <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
                 <div className="p-2 rounded-lg bg-rose-50 text-rose-600">
@@ -126,13 +129,13 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onRetry }) => {
              <div className="space-y-3">
                 <div className="flex items-baseline justify-between">
                   <span className="text-2xl font-bold text-foreground capitalize leading-none">
-                    {data.disease.label.replace(/_/g, ' ')}
+                    {formatLabel(activeDisease.label)}
                   </span>
                   <span className="text-sm font-medium text-muted-foreground">
-                    {(data.disease.confidence * 100).toFixed(1)}%
+                    {formatConfidence(activeDisease.confidence)}
                   </span>
                 </div>
-                <ProgressBar value={data.disease.confidence} colorClass="bg-rose-500" height="h-2" showValue={false} />
+                <ProgressBar value={activeDisease.confidence} colorClass="bg-rose-500" height="h-2" showValue={false} />
              </div>
           </div>
         ) : (
@@ -148,6 +151,7 @@ const AnalysisResult: React.FC<AnalysisResultProps> = ({ data, onRetry }) => {
           variant="outline" 
           onClick={onRetry}
           className="group px-6 h-11 border-border/60 hover:bg-secondary/50"
+          aria-label="Analyze another sample"
         >
           <span>Analyze Another Sample</span>
           <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
