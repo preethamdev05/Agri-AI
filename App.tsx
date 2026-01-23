@@ -3,8 +3,10 @@ import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tansta
 import { WifiOff, AlertCircle, Sprout, Sun, Moon, Loader2, History, Languages } from 'lucide-react';
 import { checkHealth, analyzeImage } from './services/api';
 import { compressImage } from './utils/imageOptimizer';
+import { mapApiErrorToMessage } from './utils/errorMapper';
 import { ThemeProvider, useTheme } from './components/ThemeProvider';
 import { I18nProvider, useI18n } from './components/I18nProvider';
+import { ToastProvider, useToast } from './components/ui/Toast';
 import FileUpload from './components/FileUpload';
 import AnalysisResult from './components/AnalysisResult';
 import Button from './components/ui/Button';
@@ -67,6 +69,7 @@ function LangToggle() {
 
 function AgriScanApp() {
   const { t } = useI18n();
+  const { addToast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loadingStep, setLoadingStep] = useState<string | null>(null);
@@ -106,6 +109,16 @@ function AgriScanApp() {
         setLoadingStep(null);
       }
     },
+    onSuccess: () => {
+       addToast("Analysis complete!", "success");
+    },
+    onError: (error) => {
+      const { message, severity } = mapApiErrorToMessage(error);
+      // We still show the EmptyState for the main error, but we can also toast warnings
+      if (severity === 'warning') {
+         addToast(message, 'info'); // Using info for warning-like toasts
+      }
+    }
   });
 
   const handleFileSelect = (file: File) => {
@@ -226,7 +239,7 @@ function AgriScanApp() {
                   <EmptyState 
                     icon={AlertCircle}
                     title="Analysis Failed"
-                    description={analysisMutation.error instanceof Error ? analysisMutation.error.message : "An unknown error occurred during inference."}
+                    description={mapApiErrorToMessage(analysisMutation.error).message}
                     actionLabel="Retry Analysis"
                     onAction={handleAnalyze}
                   />
@@ -262,8 +275,8 @@ function AgriScanApp() {
         
         {showHistory && (
            <div className="space-y-2 animate-in slide-in-from-bottom-2 fade-in">
+              {/* This would be mapped from actual history state in a real implementation */}
               <p className="text-center text-xs text-muted-foreground italic">{t('history.empty')}</p>
-              {/* Mock placeholder, actual list would map localStorage items */}
            </div>
         )}
 
@@ -278,7 +291,7 @@ function AgriScanApp() {
                <p className="text-xs text-muted-foreground">
                 &copy; {new Date().getFullYear()} AgriScan AI. 
                 <span className="mx-2">•</span>
-                v2.6.0-prod
+                v2.7.0-prod
               </p>
             </div>
           </div>
@@ -292,9 +305,11 @@ export default function App() {
   return (
     <I18nProvider>
       <ThemeProvider defaultTheme="system" storageKey="agri-scan-theme">
-        <QueryClientProvider client={queryClient}>
-          <AgriScanApp />
-        </QueryClientProvider>
+        <ToastProvider>
+           <QueryClientProvider client={queryClient}>
+             <AgriScanApp />
+           </QueryClientProvider>
+        </ToastProvider>
       </ThemeProvider>
     </I18nProvider>
   );
