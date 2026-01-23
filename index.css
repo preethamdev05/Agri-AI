@@ -4,25 +4,63 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Base - Slate/Gray Scale for neutral modern look */
+    --background: 210 40% 98%;
+    --foreground: 222.2 47.4% 11.2%;
+
+    /* Cards - White with subtle separation */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    
+    /* Popovers */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 151 77% 39%;
-    --primary-foreground: 210 40% 98%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+
+    /* Primary - Deep Emerald (Trustworthy, Agricultural) */
+    --primary: 158 64% 52%;
+    --primary-foreground: 160 60% 98%;
+
+    /* Secondary - Subtle Blue-Gray */
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
+
+    /* Muted - For de-emphasized text */
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+
+    /* Accent - For interactive elements */
+    --accent: 158 64% 96%;
+    --accent-foreground: 160 60% 20%;
+
+    /* Destructive - Red */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
+
+    /* Borders & Inputs */
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --ring: 158 64% 52%;
+
+    --radius: 0.75rem;
   }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* Custom Scrollbar for a polished feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
 }
