@@ -4,11 +4,11 @@
 
 @layer base {
   :root {
-    /* Base - Slate/Gray Scale for neutral modern look */
+    /* Base - Clean, Modern Slate/Gray Scale */
     --background: 210 40% 98%;
     --foreground: 222.2 47.4% 11.2%;
 
-    /* Cards - White with subtle separation */
+    /* Cards - White with distinct separation */
     --card: 0 0% 100%;
     --card-foreground: 222.2 47.4% 11.2%;
     
@@ -16,23 +16,23 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
 
-    /* Primary - Deep Emerald (Trustworthy, Agricultural) */
+    /* Primary - Vibrant Emerald (Growth, Health, Tech) */
     --primary: 158 64% 52%;
     --primary-foreground: 160 60% 98%;
 
-    /* Secondary - Subtle Blue-Gray */
+    /* Secondary - Soft Blue-Gray for containers */
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
-    /* Muted - For de-emphasized text */
+    /* Muted - For metadata and de-emphasized text */
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    /* Accent - For interactive elements */
+    /* Accent - For interactive elements and hovers */
     --accent: 158 64% 96%;
     --accent-foreground: 160 60% 20%;
 
-    /* Destructive - Red */
+    /* Destructive - Alert Red */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
@@ -44,7 +44,6 @@
     --radius: 0.75rem;
   }
 
-  /* Dark Mode Overrides */
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -55,7 +54,6 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    /* Primary adjusted for dark contrast */
     --primary: 158 64% 52%;
     --primary-foreground: 144 60% 10%;
 
@@ -82,22 +80,27 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased transition-colors duration-300;
+    @apply bg-background text-foreground antialiased font-sans transition-colors duration-300;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-medium;
   }
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  @apply bg-transparent;
-}
-::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
+/* Custom Scrollbar for desktop */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
+  }
 }
 
-/* Accessible Focus States */
-:focus-visible {
-  @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+/* Utilities */
+.glass-panel {
+  @apply bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border border-white/20 shadow-sm;
 }
