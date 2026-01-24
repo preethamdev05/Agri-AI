@@ -65,7 +65,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading 
         className={`
           relative group cursor-pointer
           flex flex-col items-center justify-center
-          w-full h-80 rounded-2xl border-3 border-dashed
+          w-full h-80 rounded-2xl border-2 border-dashed
           transition-all duration-300 ease-in-out
           bg-background/50 hover:bg-secondary/30
           focus-visible:ring-4 focus-visible:ring-primary/20
