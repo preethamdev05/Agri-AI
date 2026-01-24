@@ -108,7 +108,7 @@ const MetadataViewer: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="grid gap-8 md:grid-cols-2 animate-in fade-in duration-300">
+            <div className="grid gap-8 md:grid-cols-2 fade-in">
               <div>
                 <h3 className="mb-4 flex items-center gap-2 font-medium text-foreground text-sm uppercase tracking-wide opacity-80">
                   <Info className="h-4 w-4 text-emerald-500" />

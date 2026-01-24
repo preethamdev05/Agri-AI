@@ -104,3 +104,39 @@
 .glass-panel {
   @apply bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border border-white/20 shadow-sm;
 }
+
+/* Animations */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-zoom {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.fade-in {
+  animation: fade-in 160ms ease-out both;
+}
+
+.fade-in-up {
+  animation: fade-in-up 180ms ease-out both;
+}
+
+.fade-in-zoom {
+  animation: fade-in-zoom 180ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .fade-in-up,
+  .fade-in-zoom {
+    animation: none !important;
+  }
+}

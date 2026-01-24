@@ -59,7 +59,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading 
   });
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-4 animate-fade-in">
+    <div className="w-full max-w-2xl mx-auto space-y-4 fade-in">
       <div
         {...getRootProps()}
         className={`
@@ -85,7 +85,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading 
             <img 
               src={preview} 
               alt="Preview" 
-              className="max-h-[85%] w-auto rounded-lg shadow-md object-contain animate-in fade-in zoom-in duration-300" 
+              className="max-h-[85%] w-auto rounded-lg shadow-md object-contain fade-in-zoom" 
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-2xl" />
             
@@ -146,7 +146,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading 
       {error && (
         <div 
           role="alert" 
-          className="flex items-center gap-3 p-4 text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded-xl animate-in slide-in-from-top-2"
+          className="flex items-center gap-3 p-4 text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded-xl fade-in"
         >
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <span className="font-medium">{error}</span>

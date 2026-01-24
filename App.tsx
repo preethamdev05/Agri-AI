@@ -97,7 +97,7 @@ function App() {
             
             {/* Hero Section (Only show when no result) */}
             {!result && (
-              <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="text-center space-y-4 fade-in-up">
                 <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight lg:text-6xl text-balance">
                   Instant Plant <span className="text-primary">Health Analysis</span>
                 </h2>
@@ -111,7 +111,7 @@ function App() {
             {/* Interactive Area */}
             <div className="relative min-h-[400px]">
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 space-y-6 animate-in fade-in duration-300">
+                <div className="flex flex-col items-center justify-center py-20 space-y-6 fade-in">
                   <div className="relative">
                     <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
                     <BarChart3 className="w-16 h-16 text-primary relative z-10 animate-bounce" />
