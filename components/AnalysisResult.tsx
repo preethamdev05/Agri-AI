@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { CheckCircle2, AlertTriangle, Leaf, Activity, Info } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Leaf, Activity, Info, ImageOff } from 'lucide-react';
 import ProgressBar from './ui/ProgressBar';
-import { isPlantHealthy, getActiveDisease, formatConfidence } from '../utils/domain';
+import { isPlantHealthy, getActiveDisease, formatConfidence, UI_MIN_CROP_CONFIDENCE } from '../utils/domain';
+import { isKnownCrop } from '../utils/metadata';
 import type { PredictResponse } from '../types';
 import type { MetadataLookup } from '../utils/metadata';
 import { Button } from './ui/Button';
@@ -19,6 +20,69 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [result]);
+
+  // UI GUARDRAIL: Block rendering if image is not a trained crop
+  const isUnsupportedImage = 
+    !result.crop || 
+    !result.crop.label ||
+    !isKnownCrop(result.crop.label, metadataLookup) ||
+    result.crop.confidence < UI_MIN_CROP_CONFIDENCE;
+
+  // UNSUPPORTED IMAGE STATE - Full replacement, no degraded results
+  if (isUnsupportedImage) {
+    return (
+      <div ref={scrollRef} className="w-full max-w-4xl mx-auto space-y-6 fade-in-up">
+        <div className="relative overflow-hidden rounded-3xl border-2 p-8 shadow-lg bg-gradient-to-br from-slate-50 to-white border-slate-200 dark:from-slate-950/50 dark:to-background dark:border-slate-800">
+          <div className="flex flex-col items-center text-center space-y-6 max-w-lg mx-auto">
+            {/* Icon */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-slate-300/30 dark:bg-slate-700/30 blur-2xl rounded-full" />
+              <div className="relative bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 p-6 rounded-full border-2 border-slate-200/50 dark:border-slate-700/50">
+                <ImageOff className="w-12 h-12 text-slate-600 dark:text-slate-400" />
+              </div>
+            </div>
+
+            {/* Primary Message */}
+            <div className="space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+                This image does not appear to be a supported crop.
+              </h2>
+              <p className="text-muted-foreground text-base leading-relaxed">
+                This model is trained only on specific crop images. Please upload a clear photo of a supported plant leaf.
+              </p>
+            </div>
+
+            {/* Helper Examples */}
+            <div className="bg-slate-100/50 dark:bg-slate-900/50 rounded-2xl p-5 border border-slate-200/50 dark:border-slate-800/50 w-full">
+              <p className="text-sm font-semibold text-foreground mb-2">Supported crops include:</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Tomato leaf, potato leaf, pepper leaf, and similar agricultural crops.
+              </p>
+              <p className="text-xs text-muted-foreground mt-3 italic">
+                Avoid screenshots, webpages, people, or non-plant objects.
+              </p>
+            </div>
+
+            {/* Action Button */}
+            <Button 
+              variant="outline" 
+              onClick={onClear} 
+              className="w-full sm:w-auto mt-2 hover:bg-primary hover:text-white transition-colors"
+            >
+              Upload a Different Image
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // NORMAL FLOW - Valid crop prediction
   const healthy = isPlantHealthy(result.health.label);
   const activeDisease = getActiveDisease(result);
   
@@ -32,32 +96,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     : activeDisease 
       ? { displayName: activeDisease.label.replace(/_/g, ' ') }
       : null;
-  
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [result]);
-
-  // Handle missing crop data (defensive UI)
-  if (!result.crop || !result.crop.label) {
-    return (
-      <div ref={scrollRef} className="w-full max-w-4xl mx-auto space-y-6 fade-in-up">
-        <div className="relative overflow-hidden rounded-3xl border p-8 shadow-sm bg-gradient-to-br from-red-50 to-white border-red-100 dark:from-red-950/20 dark:to-background dark:border-red-900/50">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">Crop identification failed</h2>
-              <p className="text-muted-foreground mt-1">Unable to identify crop from provided image.</p>
-            </div>
-          </div>
-          <Button variant="outline" onClick={onClear} className="mt-6">
-            Try Another Image
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div ref={scrollRef} className="w-full max-w-4xl mx-auto space-y-6 fade-in-up">
