@@ -16,6 +16,19 @@ import { PredictResponse } from '../types';
 const NEGATIVE_CLASS_LABEL = 'healthy';
 
 /**
+ * SECONDARY UI GUARD: Minimum crop confidence for display.
+ * This is a display-only sanity floor applied AFTER domain validation.
+ * 
+ * This does NOT alter inference - the backend decides predictions.
+ * This prevents showing results when confidence is suspiciously low.
+ * 
+ * Order of checks in UI:
+ * 1. FIRST: Is crop label in trained metadata? (domain validation)
+ * 2. SECOND: Is confidence >= UI_MIN_CROP_CONFIDENCE? (sanity check)
+ */
+export const UI_MIN_CROP_CONFIDENCE = 0.55;
+
+/**
  * Determines if a prediction result indicates a healthy plant.
  * Enforces Case-Insensitive comparison as a safety guard.
  */
