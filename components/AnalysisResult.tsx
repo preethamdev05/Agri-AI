@@ -26,16 +26,20 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   }, [result]);
 
   // OPTIMAL GUARDRAIL: 90% confidence threshold
-  // Rationale:
-  // - Blocks random/non-crop images (typically <70% confidence)
-  // - Allows high-quality crop photos (90%+ confidence)
-  // - Balanced for production: strict enough for quality, lenient enough for real-world use
-  // - Industry standard for ML classification confidence
   const CROP_CONFIDENCE_THRESHOLD = 0.90;
   const hasValidCrop = result.crop && result.crop.label;
-  const meetsConfidenceThreshold = hasValidCrop && result.crop.confidence >= CROP_CONFIDENCE_THRESHOLD;
+  const cropConfidence = result.crop?.confidence || 0;
+  const meetsConfidenceThreshold = hasValidCrop && cropConfidence >= CROP_CONFIDENCE_THRESHOLD;
+  
+  // Debug logging
+  console.log('[DEBUG] Crop:', result.crop?.label);
+  console.log('[DEBUG] Confidence:', cropConfidence);
+  console.log('[DEBUG] Threshold:', CROP_CONFIDENCE_THRESHOLD);
+  console.log('[DEBUG] Passes threshold:', meetsConfidenceThreshold);
+  console.log('[DEBUG] Has valid crop:', hasValidCrop);
   
   const isUnsupportedImage = !hasValidCrop || !meetsConfidenceThreshold;
+  console.log('[DEBUG] Final decision - isUnsupportedImage:', isUnsupportedImage);
 
   // UNSUPPORTED IMAGE STATE - Full replacement, no degraded results
   if (isUnsupportedImage) {
@@ -72,6 +76,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               </p>
             </div>
 
+            {/* Debug info */}
+            <div className="text-xs text-left font-mono bg-slate-900 text-slate-100 p-3 rounded w-full">
+              <div>Crop: {result.crop?.label || 'null'}</div>
+              <div>Confidence: {cropConfidence.toFixed(4)}</div>
+              <div>Threshold: {CROP_CONFIDENCE_THRESHOLD}</div>
+              <div>Pass: {meetsConfidenceThreshold ? 'YES' : 'NO'}</div>
+            </div>
+
             {/* Action Button */}
             <Button 
               variant="outline" 
@@ -87,6 +99,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   }
 
   // NORMAL FLOW - Valid crop prediction
+  console.log('[DEBUG] Showing analysis for:', result.crop.label);
+  
   const healthy = isPlantHealthy(result.health.label);
   const activeDisease = getActiveDisease(result);
   
