@@ -63,36 +63,36 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     <div ref={scrollRef} className="w-full max-w-4xl mx-auto space-y-6 fade-in-up">
       {/* Primary Status Card */}
       <div className={`
-        relative overflow-hidden rounded-3xl border p-8 shadow-sm
+        relative overflow-hidden rounded-3xl border-2 p-8 shadow-lg
         ${
           healthy 
-            ? 'bg-gradient-to-br from-emerald-50 to-white border-emerald-100 dark:from-emerald-950/20 dark:to-background dark:border-emerald-900/50' 
-            : 'bg-gradient-to-br from-amber-50 to-white border-amber-100 dark:from-amber-950/20 dark:to-background dark:border-amber-900/50'
+            ? 'bg-gradient-to-br from-emerald-50 to-white border-emerald-200 dark:from-emerald-950/20 dark:to-background dark:border-emerald-800' 
+            : 'bg-gradient-to-br from-amber-50 to-white border-amber-200 dark:from-amber-950/20 dark:to-background dark:border-amber-800'
         }
       `}>
-        <div className="flex flex-col md:flex-row gap-8 items-start md:items-center justify-between">
-          <div className="space-y-4 flex-1">
-            {/* Health Status Pill */}
+        <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-center justify-between">
+          <div className="space-y-6 flex-1 w-full">
+            {/* Health Status Pill - Enhanced */}
             <div className={`
-              inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border
+              inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-sm font-semibold border-2 shadow-md backdrop-blur-sm
               ${
                 healthy 
-                  ? 'bg-emerald-100/50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' 
-                  : 'bg-amber-100/50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                  ? 'bg-emerald-100/80 text-emerald-700 border-emerald-300 shadow-emerald-500/20 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700' 
+                  : 'bg-amber-100/80 text-amber-700 border-amber-300 shadow-amber-500/20 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700'
               }
             `}>
-              {healthy ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-              Health status: {healthy ? "Healthy" : "Disease detected"}
+              {healthy ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+              <span>Health status: {healthy ? "Healthy" : "Disease detected"}</span>
             </div>
             
-            {/* FIXED: Crop Name as Primary Headline */}
+            {/* Crop Name as Primary Headline - Enhanced Typography */}
             <div>
-              <p className="text-sm text-muted-foreground mb-1">Crop identified</p>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5 font-medium">Crop identified</p>
+              <h2 className="text-4xl sm:text-5xl font-bold tracking-tighter text-foreground leading-tight">
                 {cropInfo.displayName}
               </h2>
               {cropInfo.description && (
-                <p className="text-muted-foreground text-sm mt-2 leading-relaxed">
+                <p className="text-muted-foreground text-sm mt-2 leading-relaxed max-w-md">
                   {cropInfo.description}
                 </p>
               )}
@@ -100,40 +100,45 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             
             {/* Disease Name (Conditional - only when diseased) */}
             {!healthy && diseaseInfo && (
-              <div className="pt-2 border-t border-black/5 dark:border-white/5">
-                <p className="text-sm text-muted-foreground mb-1">Disease detected:</p>
-                <h3 className="text-xl font-semibold text-foreground">
+              <div className="pt-3 border-t border-black/5 dark:border-white/5">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5 font-medium">Disease detected</p>
+                <h3 className="text-2xl font-semibold text-foreground">
                   {diseaseInfo.displayName}
                 </h3>
                 {diseaseInfo.description && (
-                  <p className="text-muted-foreground text-sm mt-1">
+                  <p className="text-muted-foreground text-sm mt-1.5 leading-relaxed">
                     {diseaseInfo.description}
                   </p>
                 )}
               </div>
             )}
             
-            {/* Supporting Metadata */}
-            <div className="flex flex-wrap gap-4 pt-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg border border-black/5">
-                <Activity className="w-4 h-4" />
-                Confidence: {formatConfidence(result.health.confidence)}
+            {/* Supporting Metadata - Enhanced Badges */}
+            <div className="flex flex-wrap gap-3 pt-3">
+              <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border-2 border-emerald-500/20 dark:border-emerald-700/40 shadow-sm backdrop-blur-sm">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-sm font-semibold text-foreground tabular-nums">
+                  {formatConfidence(result.health.confidence)}
+                </span>
+                <span className="text-xs text-muted-foreground">confidence</span>
               </div>
               {result.processing_time_ms && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg border border-black/5">
-                  <Info className="w-4 h-4" />
-                  {result.processing_time_ms.toFixed(0)}ms
+                <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border-2 border-blue-500/20 dark:border-blue-700/40 shadow-sm backdrop-blur-sm">
+                  <Activity className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-semibold text-foreground tabular-nums">
+                    {result.processing_time_ms.toFixed(0)}ms
+                  </span>
                 </div>
               )}
             </div>
           </div>
           
-          {/* Image Placeholder */}
-          <div className="relative group shrink-0">
-             <div className={`absolute inset-0 blur-2xl opacity-20 rounded-full ${healthy ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-             <div className="relative bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-lg border rotate-3 transition-transform group-hover:rotate-0 duration-500">
-               <div className="w-32 h-32 bg-secondary/50 rounded-xl flex items-center justify-center">
-                 <Leaf className="w-12 h-12 text-muted-foreground/30" />
+          {/* Image Placeholder - Enhanced Glassmorphism */}
+          <div className="relative group shrink-0 self-center sm:self-start">
+             <div className={`absolute inset-0 blur-3xl opacity-30 rounded-3xl ${healthy ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+             <div className="relative bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 p-3 rounded-3xl shadow-xl border-2 border-white/20 dark:border-white/10 backdrop-blur-sm rotate-2 transition-all duration-500 group-hover:rotate-0 group-hover:scale-105">
+               <div className="w-36 h-36 bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/30 dark:to-emerald-800/20 rounded-2xl flex items-center justify-center overflow-hidden">
+                 <Leaf className="w-16 h-16 text-emerald-500/40 dark:text-emerald-400/30" />
                </div>
              </div>
           </div>
@@ -142,41 +147,40 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
       {/* Detailed Metrics */}
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-card rounded-2xl border shadow-sm p-6 space-y-6">
+        <div className="bg-card rounded-2xl border-2 shadow-sm p-6 space-y-6 dark:border-slate-800">
           <div className="flex items-center justify-between">
-             <h3 className="font-semibold flex items-center gap-2">
+             <h3 className="font-semibold flex items-center gap-2 text-base">
                <Activity className="w-5 h-5 text-primary" />
                Confidence Metrics
              </h3>
              <Info className="w-4 h-4 text-muted-foreground" />
           </div>
           
-          <div className="space-y-4">
-             {/* FIXED: Updated label copy */}
+          <div className="space-y-5">
              <ProgressBar 
-               label="Health Detection Confidence" 
+               label="Health Detection" 
                value={result.health.confidence} 
                colorClass={healthy ? "bg-emerald-500" : "bg-amber-500"} 
              />
              
              <ProgressBar 
-               label="Crop Identification Confidence" 
+               label="Crop Identification" 
                value={result.crop.confidence} 
                colorClass="bg-blue-500" 
              />
           </div>
         </div>
 
-        <div className="bg-card rounded-2xl border shadow-sm p-6 flex flex-col justify-center items-center text-center space-y-4">
-           <div className="p-4 bg-secondary/50 rounded-full">
-             <Leaf className="w-8 h-8 text-muted-foreground" />
+        <div className="bg-card rounded-2xl border-2 shadow-sm p-6 flex flex-col justify-center items-center text-center space-y-4 dark:border-slate-800">
+           <div className="p-4 bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/30 dark:to-emerald-800/20 rounded-full">
+             <Leaf className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
            </div>
            <div>
-             <h3 className="font-semibold">Analyze another sample</h3>
-             <p className="text-sm text-muted-foreground mt-1 mb-4 max-w-xs mx-auto">
+             <h3 className="font-semibold text-base mb-1">Analyze another sample</h3>
+             <p className="text-sm text-muted-foreground mt-1 mb-4 max-w-xs mx-auto leading-relaxed">
                Field verification is recommended for production crops.
              </p>
-             <Button variant="outline" onClick={onClear} className="w-full">
+             <Button variant="outline" onClick={onClear} className="w-full hover:bg-primary hover:text-white transition-colors">
                Analyze New Image
              </Button>
            </div>
