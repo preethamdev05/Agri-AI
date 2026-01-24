@@ -1,8 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { CheckCircle2, AlertTriangle, Leaf, Activity, Info, ImageOff } from 'lucide-react';
 import ProgressBar from './ui/ProgressBar';
-import { isPlantHealthy, getActiveDisease, formatConfidence, UI_MIN_CROP_CONFIDENCE } from '../utils/domain';
-import { isKnownCrop } from '../utils/metadata';
+import { isPlantHealthy, getActiveDisease, formatConfidence } from '../utils/domain';
 import type { PredictResponse } from '../types';
 import type { MetadataLookup } from '../utils/metadata';
 import { Button } from './ui/Button';
@@ -26,23 +25,12 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     }
   }, [result]);
 
-  // UI GUARDRAIL: Block rendering if image is not a trained crop
-  // Strategy:
-  // 1. Always require valid crop data and minimum confidence
-  // 2. For high confidence (>=70%), trust the model regardless of metadata
-  // 3. For medium confidence (30-70%), validate against metadata if available
+  // SIMPLE GUARDRAIL: Block if crop confidence < 80%
+  const CROP_CONFIDENCE_THRESHOLD = 0.80;
   const hasValidCrop = result.crop && result.crop.label;
-  const confidence = result.crop?.confidence || 0;
-  const meetsMinConfidence = confidence >= UI_MIN_CROP_CONFIDENCE;
-  const isHighConfidence = confidence >= 0.70; // 70% or higher - trust it
+  const meetsConfidenceThreshold = hasValidCrop && result.crop.confidence >= CROP_CONFIDENCE_THRESHOLD;
   
-  // Only check metadata for medium confidence predictions
-  const needsMetadataCheck = !isHighConfidence && metadataLookup;
-  const isKnown = needsMetadataCheck 
-    ? isKnownCrop(result.crop?.label || '', metadataLookup) 
-    : true; // Bypass check for high confidence or no metadata
-  
-  const isUnsupportedImage = !hasValidCrop || !meetsMinConfidence || !isKnown;
+  const isUnsupportedImage = !hasValidCrop || !meetsConfidenceThreshold;
 
   // UNSUPPORTED IMAGE STATE - Full replacement, no degraded results
   if (isUnsupportedImage) {
