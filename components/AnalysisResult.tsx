@@ -3,7 +3,7 @@ import { CheckCircle2, AlertTriangle, Leaf, Activity, Info, ImageOff } from 'luc
 import ProgressBar from './ui/ProgressBar';
 import { isPlantHealthy, getActiveDisease, formatConfidence, UI_MIN_CROP_CONFIDENCE } from '../utils/domain';
 import type { PredictResponse } from '../types';
-import type { MetadataLookup } from '../utils/metadata';
+import { MetadataLookup, isKnownCrop, hasTrainedCropMetadata } from '../utils/metadata';
 import { Button } from './ui/Button';
 
 interface AnalysisResultProps {
@@ -25,28 +25,33 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     }
   }, [result]);
 
-  // TWO-STAGE DOMAIN VALIDATION GUARD
-  // CRITICAL: This implements the proper domain boundary.
-  // Order matters: domain validation FIRST, confidence SECOND.
+  // TWO-STAGE DOMAIN VALIDATION GUARD (SAFE FALLBACK)
   
   const cropLabel = result.crop?.label;
   const cropConfidence = result.crop?.confidence ?? 0;
 
-  // PRIMARY GATE: Domain validity - is this a trained crop?
-  // This check prevents showing "Tomato" for webpage screenshots, random objects, etc.
-  // If metadata fails to load, we fail closed (treat as unknown domain).
-  const isTrainedCrop = cropLabel && metadataLookup 
-    ? metadataLookup.isKnownCrop(cropLabel)
-    : false;
+  // CHECK 1: Is metadata available to perform validation?
+  // If not, we "fail open" (allow logic to proceed based on confidence only)
+  // This prevents bricking the UI if metadata fails to load.
+  const metadataReady = hasTrainedCropMetadata();
 
-  // SECONDARY GATE: Confidence sanity floor
-  // Only applied AFTER domain validation passes.
-  // Prevents showing results when confidence is suspiciously low.
+  // CHECK 2: Primary Domain Gate
+  // If metadata is ready, we strictly enforce the whitelist.
+  // If metadata is NOT ready, we assume true (fallback).
+  const isTrained = metadataReady
+    ? isKnownCrop(cropLabel)
+    : true; 
+
+  // CHECK 3: Secondary Confidence Gate
+  // Only matters if we haven't already blocked it via domain check.
   const hasEnoughConfidence = cropConfidence >= UI_MIN_CROP_CONFIDENCE;
 
   // FINAL DECISION
-  // Both conditions must be true to show crop analysis.
-  const isUnsupportedImage = !isTrainedCrop || !hasEnoughConfidence;
+  // We block if:
+  // A) Metadata is ready AND it's not a trained crop (Domain Block)
+  // OR
+  // B) Confidence is too low (Quality Block)
+  const isUnsupportedImage = (!isTrained && metadataReady) || !hasEnoughConfidence;
 
   // UNSUPPORTED IMAGE STATE - Full replacement, no degraded results
   if (isUnsupportedImage) {
@@ -98,7 +103,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   }
 
   // NORMAL FLOW - Valid crop prediction
-  // Only reached if both domain validation and confidence checks pass.
+  // Only reached if guard passes.
   
   const healthy = isPlantHealthy(result.health.label);
   const activeDisease = getActiveDisease(result);
