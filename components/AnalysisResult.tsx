@@ -13,7 +13,8 @@ interface AnalysisResultProps {
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({ result, onClear }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  const healthy = isPlantHealthy(result);
+  // FIXED: Pass result.health.label string instead of the entire result object
+  const healthy = isPlantHealthy(result.health.label);
   const activeDisease = getActiveDisease(result);
   
   useEffect(() => {
@@ -57,7 +58,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ result, onClear 
             <div className="flex flex-wrap gap-4 pt-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg border border-black/5">
                 <Activity className="w-4 h-4" />
-                Confidence: {(result.confidence * 100).toFixed(1)}%
+                Confidence: {(result.health.confidence * 100).toFixed(1)}%
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg border border-black/5">
                 <Leaf className="w-4 h-4" />
@@ -93,7 +94,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ result, onClear 
              {/* If we had multiple predictions, map them here. For now showing main confidence */}
              <ProgressBar 
                label="Primary Diagnosis Confidence" 
-               value={result.confidence} 
+               value={result.health.confidence} 
                colorClass={healthy ? "bg-emerald-500" : "bg-amber-500"} 
              />
              
