@@ -27,11 +27,12 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   }, [result]);
 
   // UI GUARDRAIL: Block rendering if image is not a trained crop
+  // Only check metadata if lookup is available (graceful degradation)
   const isUnsupportedImage = 
     !result.crop || 
     !result.crop.label ||
-    !isKnownCrop(result.crop.label, metadataLookup) ||
-    result.crop.confidence < UI_MIN_CROP_CONFIDENCE;
+    result.crop.confidence < UI_MIN_CROP_CONFIDENCE ||
+    (metadataLookup && !isKnownCrop(result.crop.label, metadataLookup));
 
   // UNSUPPORTED IMAGE STATE - Full replacement, no degraded results
   if (isUnsupportedImage) {
