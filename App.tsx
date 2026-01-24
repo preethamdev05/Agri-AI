@@ -1,10 +1,9 @@
 import React, { useState, Suspense, useEffect } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 import { Sprout, BarChart3, Info } from 'lucide-react';
 import { FileUpload } from './components/FileUpload';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Skeleton } from './components/ui/Skeleton';
-import { Toast } from './components/ui/Toast';
 import { analyzeImage, checkHealth } from './services/api';
 import type { PredictResponse } from './types';
 
@@ -34,11 +33,7 @@ function App() {
       setResult(data);
     } catch (error) {
       console.error(error);
-      Toast({ 
-        title: "Analysis Failed", 
-        message: error instanceof Error ? error.message : "Unknown error", 
-        type: "error" 
-      });
+      toast.error(error instanceof Error ? error.message : "Unknown error");
     } finally {
       setLoading(false);
     }
