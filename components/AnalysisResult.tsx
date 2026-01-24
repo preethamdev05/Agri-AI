@@ -26,13 +26,22 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     }
   }, [result]);
 
+  // Debug logging
+  console.log('[AnalysisResult] Crop:', result.crop?.label, 'Confidence:', result.crop?.confidence);
+  console.log('[AnalysisResult] Metadata available:', !!metadataLookup);
+  console.log('[AnalysisResult] Threshold:', UI_MIN_CROP_CONFIDENCE);
+
   // UI GUARDRAIL: Block rendering if image is not a trained crop
   // Only check metadata if lookup is available (graceful degradation)
-  const isUnsupportedImage = 
-    !result.crop || 
-    !result.crop.label ||
-    result.crop.confidence < UI_MIN_CROP_CONFIDENCE ||
-    (metadataLookup && !isKnownCrop(result.crop.label, metadataLookup));
+  const hasValidCrop = result.crop && result.crop.label;
+  const meetsConfidence = result.crop && result.crop.confidence >= UI_MIN_CROP_CONFIDENCE;
+  const isKnown = !metadataLookup || isKnownCrop(result.crop?.label || '', metadataLookup);
+  
+  console.log('[AnalysisResult] Guard checks - hasValidCrop:', hasValidCrop, 'meetsConfidence:', meetsConfidence, 'isKnown:', isKnown);
+  
+  const isUnsupportedImage = !hasValidCrop || !meetsConfidence || !isKnown;
+  
+  console.log('[AnalysisResult] Final decision - isUnsupportedImage:', isUnsupportedImage);
 
   // UNSUPPORTED IMAGE STATE - Full replacement, no degraded results
   if (isUnsupportedImage) {
@@ -67,6 +76,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               <p className="text-xs text-muted-foreground mt-3 italic">
                 Avoid screenshots, webpages, people, or non-plant objects.
               </p>
+            </div>
+
+            {/* Debug Info (temporary) */}
+            <div className="text-xs text-muted-foreground bg-slate-100 dark:bg-slate-900 rounded p-3 font-mono text-left w-full">
+              <div>Crop: {result.crop?.label || 'null'}</div>
+              <div>Confidence: {result.crop?.confidence?.toFixed(3) || 'null'}</div>
+              <div>Threshold: {UI_MIN_CROP_CONFIDENCE}</div>
+              <div>Metadata: {metadataLookup ? 'loaded' : 'unavailable'}</div>
             </div>
 
             {/* Action Button */}
