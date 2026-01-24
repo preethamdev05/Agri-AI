@@ -22,11 +22,16 @@ const NEGATIVE_CLASS_LABEL = 'healthy';
  * This does NOT alter inference - the backend decides predictions.
  * This prevents showing results when confidence is suspiciously low.
  * 
+ * Value Rationale (0.50):
+ * - Real crop images often show 0.60-0.85 confidence after mobile compression
+ * - 0.50 accounts for edge cases while still filtering obvious misclassifications
+ * - Combined with metadata whitelist, this is a safe secondary gate
+ * 
  * Order of checks in UI:
  * 1. FIRST: Is crop label in trained metadata? (domain validation)
  * 2. SECOND: Is confidence >= UI_MIN_CROP_CONFIDENCE? (sanity check)
  */
-export const UI_MIN_CROP_CONFIDENCE = 0.55;
+export const UI_MIN_CROP_CONFIDENCE = 0.50;
 
 /**
  * Determines if a prediction result indicates a healthy plant.
