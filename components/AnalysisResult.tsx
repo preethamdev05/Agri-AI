@@ -25,10 +25,10 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     }
   }, [result]);
 
-  // STRICT GUARDRAIL: Block if crop confidence is not exactly 100%
-  const CROP_CONFIDENCE_THRESHOLD = 1.0;
+  // GUARDRAIL: Block if crop confidence is not above 98%
+  const CROP_CONFIDENCE_THRESHOLD = 0.98;
   const hasValidCrop = result.crop && result.crop.label;
-  const meetsConfidenceThreshold = hasValidCrop && result.crop.confidence >= CROP_CONFIDENCE_THRESHOLD;
+  const meetsConfidenceThreshold = hasValidCrop && result.crop.confidence > CROP_CONFIDENCE_THRESHOLD;
   
   const isUnsupportedImage = !hasValidCrop || !meetsConfidenceThreshold;
 
