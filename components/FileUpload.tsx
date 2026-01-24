@@ -65,13 +65,25 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading 
         className={`
           relative group cursor-pointer
           flex flex-col items-center justify-center
-          w-full h-80 rounded-2xl border-2 border-dashed
-          transition-all duration-300 ease-in-out
-          bg-background/50 hover:bg-secondary/30
-          focus-visible:ring-4 focus-visible:ring-primary/20
-          ${isDragActive ? 'border-primary bg-primary/5 scale-[1.01] shadow-lg' : 'border-border'}
-          ${isDragReject || error ? 'border-destructive/50 bg-destructive/5' : ''}
-          ${preview ? 'border-solid border-primary/20 bg-secondary/5' : ''}
+          w-full h-80 rounded-3xl border-2 border-dashed
+          transition-all duration-300 ease-out
+          bg-gradient-to-br from-background/50 to-secondary/30 hover:from-secondary/30 hover:to-secondary/50
+          focus-visible:ring-4 focus-visible:ring-primary/20 focus-visible:outline-none
+          ${
+            isDragActive 
+              ? 'border-primary bg-primary/5 scale-[1.02] shadow-2xl shadow-primary/20 border-solid' 
+              : 'border-border hover:border-primary/50'
+          }
+          ${
+            isDragReject || error 
+              ? 'border-destructive/60 bg-destructive/5 border-solid' 
+              : ''
+          }
+          ${
+            preview 
+              ? 'border-solid border-primary/30 bg-gradient-to-br from-emerald-50/50 to-white dark:from-emerald-950/10 dark:to-background' 
+              : ''
+          }
         `}
         role="button"
         aria-label="Upload image area"
@@ -85,40 +97,51 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading 
             <img 
               src={preview} 
               alt="Preview" 
-              className="max-h-[85%] w-auto rounded-lg shadow-md object-contain fade-in-zoom" 
+              className="max-h-[85%] w-auto rounded-2xl shadow-2xl object-contain fade-in-zoom border-2 border-white/50 dark:border-slate-700/50" 
             />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-2xl" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent group-hover:from-black/10 transition-colors rounded-3xl pointer-events-none" />
             
             {!isLoading && (
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={clearFile}
-                className="absolute top-6 right-6 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-6 right-6 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
                 aria-label="Remove image"
               >
                 <X className="w-4 h-4 mr-1" /> Remove
               </Button>
             )}
             
-            <div className="absolute bottom-6 flex items-center gap-2 px-4 py-2 bg-background/90 backdrop-blur-sm rounded-full shadow-sm text-sm font-medium text-foreground/80">
-              <FileCheck className="w-4 h-4 text-primary" />
+            <div className="absolute bottom-6 flex items-center gap-2.5 px-4 py-2.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-full shadow-lg border border-emerald-500/20 text-sm font-semibold text-foreground">
+              <FileCheck className="w-4 h-4 text-emerald-500" />
               Ready for analysis
             </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-center p-8 space-y-6">
             <div className={`
-              p-6 rounded-full transition-all duration-300
-              ${isDragActive ? 'bg-primary/10 text-primary scale-110' : 'bg-secondary text-muted-foreground group-hover:scale-105 group-hover:bg-secondary/80'}
-              ${error ? 'bg-destructive/10 text-destructive' : ''}
+              relative p-6 rounded-full transition-all duration-300
+              ${
+                isDragActive 
+                  ? 'bg-primary/10 text-primary scale-110' 
+                  : 'bg-gradient-to-br from-secondary to-secondary/50 text-muted-foreground group-hover:scale-105 group-hover:from-secondary/80 group-hover:to-secondary'
+              }
+              ${
+                error 
+                  ? 'bg-destructive/10 text-destructive' 
+                  : ''
+              }
             `}>
+              {!isDragActive && !error && (
+                <div className="absolute inset-0 bg-primary/5 rounded-full animate-pulse" />
+              )}
               {error ? (
-                <AlertCircle className="w-10 h-10" />
+                <AlertCircle className="w-10 h-10 relative z-10" />
               ) : isDragActive ? (
-                <UploadCloud className="w-10 h-10 animate-bounce" />
+                <UploadCloud className="w-10 h-10 animate-bounce relative z-10" />
               ) : (
-                <ImageIcon className="w-10 h-10" />
+                <ImageIcon className="w-10 h-10 relative z-10" />
               )}
             </div>
 
@@ -128,13 +151,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading 
               </p>
               <p id="upload-hint" className="text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed">
                 Drag and drop or click to browse.<br/>
-                Supports JPG, PNG, WebP up to 10MB.
+                <span className="text-xs">Supports JPG, PNG, WebP up to 10MB.</span>
               </p>
             </div>
 
             <Button 
               variant={isDragActive ? "primary" : "secondary"}
-              className="mt-2 pointer-events-none" // Button is visual only, parent div handles click
+              className="mt-2 pointer-events-none shadow-sm" // Button is visual only, parent div handles click
               tabIndex={-1}
             >
               Select Image
@@ -146,7 +169,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading 
       {error && (
         <div 
           role="alert" 
-          className="flex items-center gap-3 p-4 text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded-xl fade-in"
+          className="flex items-center gap-3 p-4 text-sm text-destructive bg-destructive/5 border-2 border-destructive/20 rounded-2xl fade-in backdrop-blur-sm"
         >
           <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <span className="font-medium">{error}</span>
