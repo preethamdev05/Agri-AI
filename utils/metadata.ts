@@ -89,6 +89,19 @@ export class MetadataLookup {
       displayName: formatLabel(label),
     };
   }
+
+  /**
+   * Determines if a label exists in the trained crop domain.
+   * Used for UI guardrails to block unsupported images.
+   * Case-insensitive comparison.
+   * 
+   * @param label - Crop label to validate
+   * @returns true only if label exists in trained metadata
+   */
+  isKnownCrop(label: string): boolean {
+    const key = normalizeKey(label);
+    return this.cropMap.has(key);
+  }
 }
 
 /**
@@ -97,4 +110,17 @@ export class MetadataLookup {
  */
 export const createMetadataLookup = (metadata: MetadataResponse | null): MetadataLookup => {
   return new MetadataLookup(metadata);
+};
+
+/**
+ * Standalone function to check if a crop label is in the trained domain.
+ * Returns false if metadata is unavailable.
+ * 
+ * @param label - Crop label to validate
+ * @param lookup - MetadataLookup instance (optional)
+ * @returns true only if label exists in trained metadata
+ */
+export const isKnownCrop = (label: string, lookup?: MetadataLookup): boolean => {
+  if (!lookup) return false;
+  return lookup.isKnownCrop(label);
 };
