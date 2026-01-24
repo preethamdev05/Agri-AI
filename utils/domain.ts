@@ -20,8 +20,13 @@ const NEGATIVE_CLASS_LABEL = 'healthy';
  * This is NOT a model threshold - it's a presentation guard.
  * Results below this threshold trigger the unsupported image UI.
  * Does NOT affect backend inference.
+ * 
+ * Set to 0.30 (30%) based on real-world testing:
+ * - Allows most valid crop images through
+ * - Still blocks very low confidence predictions
+ * - Balances user experience with quality control
  */
-export const UI_MIN_CROP_CONFIDENCE = 0.55;
+export const UI_MIN_CROP_CONFIDENCE = 0.30;
 
 /**
  * Determines if a prediction result indicates a healthy plant.
