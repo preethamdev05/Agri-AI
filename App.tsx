@@ -4,7 +4,8 @@ import { Sprout, BarChart3, Info } from 'lucide-react';
 import { FileUpload } from './components/FileUpload';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Skeleton from './components/ui/Skeleton';
-import { analyzeImage, checkHealth } from './services/api';
+import { analyzeImage, checkHealth, fetchMetadata } from './services/api';
+import { createMetadataLookup, type MetadataLookup } from './utils/metadata';
 import type { PredictResponse } from './types';
 
 // Lazy load heavy result component
@@ -16,9 +17,23 @@ function App() {
   const [result, setResult] = useState<PredictResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [healthStatus, setHealthStatus] = useState<boolean | null>(null);
+  const [metadataLookup, setMetadataLookup] = useState<MetadataLookup | null>(null);
 
   useEffect(() => {
+    // Initialize system checks and metadata
     checkHealth().then(setHealthStatus);
+    
+    // Fetch metadata for label enrichment (non-blocking)
+    fetchMetadata()
+      .then(metadata => {
+        const lookup = createMetadataLookup(metadata);
+        setMetadataLookup(lookup);
+      })
+      .catch(error => {
+        console.warn('Metadata fetch failed, using fallback labels:', error);
+        // Create empty lookup for graceful degradation
+        setMetadataLookup(createMetadataLookup(null));
+      });
     
     // Cleanup object URLs on unmount
     return () => {
@@ -125,7 +140,11 @@ function App() {
                 </div>
               ) : result ? (
                 <Suspense fallback={<div className="p-8 space-y-4"><Skeleton className="h-64 w-full rounded-2xl" /></div>}>
-                  <AnalysisResult result={result} onClear={handleClear} />
+                  <AnalysisResult 
+                    result={result} 
+                    onClear={handleClear}
+                    metadataLookup={metadataLookup || undefined}
+                  />
                 </Suspense>
               ) : (
                 <div className="bg-card rounded-3xl border shadow-sm p-1">
