@@ -1,218 +1,157 @@
-import React, { useCallback, useState, useRef } from 'react';
-import { UploadCloud, Image as ImageIcon, X, AlertCircle, FileUp } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Button from './ui/Button';
+import React, { useCallback, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { UploadCloud, Image as ImageIcon, AlertCircle, X, FileCheck } from 'lucide-react';
+import { Button } from './ui/Button';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
-  onClear: () => void;
-  selectedFile: File | null;
-  previewUrl: string | null;
-  disabled?: boolean;
+  isLoading?: boolean;
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-// Optimized: Memoized to prevent re-renders when parent state updates (e.g. health check)
-const FileUpload: React.FC<FileUploadProps> = ({ 
-  onFileSelect, 
-  onClear, 
-  selectedFile, 
-  previewUrl,
-  disabled 
-}) => {
-  const [isDragOver, setIsDragOver] = useState(false);
+export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading = false }) => {
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
-  const validateAndSelect = (file: File) => {
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
     setError(null);
-    if (!file.type.startsWith('image/')) {
-      setError('Invalid file type. Please upload an image (JPG, PNG, WEBP).');
+    
+    if (rejectedFiles.length > 0) {
+      const rejection = rejectedFiles[0];
+      if (rejection.errors[0]?.code === 'file-too-large') {
+        setError('File is too large. Max size is 10MB.');
+      } else {
+        setError('Please upload a valid image file (JPEG, PNG, WebP).');
+      }
       return;
     }
-    if (file.size > MAX_FILE_SIZE) {
-      setError('File size exceeds 10MB limit.');
-      return;
-    }
-    onFileSelect(file);
-  };
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    if (disabled) return;
-    setIsDragOver(true);
-  }, [disabled]);
+    if (acceptedFiles.length > 0) {
+      const file = acceptedFiles[0];
+      
+      // Additional safety check beyond Dropzone
+      if (!file.type.startsWith('image/')) {
+        setError('Invalid file type.');
+        return;
+      }
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    if (disabled) return;
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      validateAndSelect(e.dataTransfer.files[0]);
-    }
-  }, [onFileSelect, disabled]);
-
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      validateAndSelect(e.target.files[0]);
+      setPreview(URL.createObjectURL(file));
+      onFileSelect(file);
     }
   }, [onFileSelect]);
 
-  const triggerInput = () => {
-    inputRef.current?.click();
+  const clearFile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(null);
+    setError(null);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      triggerInput();
-    }
-  };
+  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
+    onDrop,
+    accept: {
+      'image/jpeg': [],
+      'image/png': [],
+      'image/webp': []
+    },
+    maxSize: 10 * 1024 * 1024, // 10MB
+    multiple: false,
+    disabled: isLoading
+  });
 
   return (
-    <div className="w-full">
-      <AnimatePresence mode="wait">
-        {!selectedFile ? (
-          <div className="space-y-3">
-             <motion.div
-              key="dropzone"
-              initial={{ opacity: 0, scale: 0.99 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.99 }}
-              className={`
-                relative flex flex-col items-center justify-center w-full min-h-[320px] 
-                rounded-xl border-2 border-dashed transition-all duration-300 cursor-pointer 
-                focus:outline-none focus:ring-4 focus:ring-primary/10
-                ${isDragOver 
-                  ? 'border-primary bg-primary/5 scale-[1.01]' 
-                  : error 
-                    ? 'border-destructive/40 bg-destructive/5' 
-                    : 'border-border/60 hover:border-primary/40 hover:bg-muted/30'
-                }
-                ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : ''}
-              `}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={!disabled ? triggerInput : undefined}
-              onKeyDown={!disabled ? handleKeyDown : undefined}
-              role="button"
-              tabIndex={disabled ? -1 : 0}
-              aria-label="Upload image dropzone"
-              aria-disabled={disabled}
-              aria-invalid={!!error}
-              aria-errormessage={error ? "upload-error-msg" : undefined}
-            >
-              <input
-                ref={inputRef}
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleChange}
-                disabled={disabled}
-                aria-hidden="true"
-              />
-              
-              <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-6 space-y-4">
-                <div className={`
-                  p-5 rounded-full shadow-sm transition-transform duration-300
-                  ${error ? 'bg-destructive/10 text-destructive' : 'bg-background text-primary ring-1 ring-border'}
-                  ${isDragOver ? 'scale-110' : ''}
-                `}>
-                  {error ? <AlertCircle size={36} strokeWidth={1.5} /> : <UploadCloud size={36} strokeWidth={1.5} />}
-                </div>
-                
-                <div className="space-y-1">
-                  <p className="text-xl font-semibold tracking-tight text-foreground">
-                    Drop your image here
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    or click to browse from your device
-                  </p>
-                </div>
+    <div className="w-full max-w-2xl mx-auto space-y-4 animate-fade-in">
+      <div
+        {...getRootProps()}
+        className={`
+          relative group cursor-pointer
+          flex flex-col items-center justify-center
+          w-full h-80 rounded-2xl border-3 border-dashed
+          transition-all duration-300 ease-in-out
+          bg-background/50 hover:bg-secondary/30
+          focus-visible:ring-4 focus-visible:ring-primary/20
+          ${isDragActive ? 'border-primary bg-primary/5 scale-[1.01] shadow-lg' : 'border-border'}
+          ${isDragReject || error ? 'border-destructive/50 bg-destructive/5' : ''}
+          ${preview ? 'border-solid border-primary/20 bg-secondary/5' : ''}
+        `}
+        role="button"
+        aria-label="Upload image area"
+        aria-describedby="upload-hint"
+        tabIndex={0}
+      >
+        <input {...getInputProps()} aria-label="File upload input" />
 
-                <div className="flex gap-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground/60">
-                   <span>JPEG</span>
-                   <span>•</span>
-                   <span>PNG</span>
-                   <span>•</span>
-                   <span>WEBP</span>
-                </div>
-              </div>
-            </motion.div>
+        {preview ? (
+          <div className="relative w-full h-full p-4 flex flex-col items-center justify-center">
+            <img 
+              src={preview} 
+              alt="Preview" 
+              className="max-h-[85%] w-auto rounded-lg shadow-md object-contain animate-in fade-in zoom-in duration-300" 
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-2xl" />
             
-            {error && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }} 
-                animate={{ opacity: 1, height: 'auto' }}
-                id="upload-error-msg"
-                className="text-sm text-destructive font-medium flex items-center justify-center gap-2"
-                role="alert"
+            {!isLoading && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={clearFile}
+                className="absolute top-6 right-6 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Remove image"
               >
-                <AlertCircle size={14} />
-                {error}
-              </motion.div>
+                <X className="w-4 h-4 mr-1" /> Remove
+              </Button>
             )}
+            
+            <div className="absolute bottom-6 flex items-center gap-2 px-4 py-2 bg-background/90 backdrop-blur-sm rounded-full shadow-sm text-sm font-medium text-foreground/80">
+              <FileCheck className="w-4 h-4 text-primary" />
+              Ready for analysis
+            </div>
           </div>
         ) : (
-          <motion.div
-            key="preview"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="group relative w-full overflow-hidden rounded-xl border bg-card shadow-sm ring-1 ring-border/50"
-          >
-            <div className="relative aspect-video w-full bg-secondary/30 flex items-center justify-center overflow-hidden">
-               {previewUrl ? (
-                 <img 
-                   src={previewUrl} 
-                   alt="Preview of selected file"
-                   className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105" 
-                 />
-               ) : (
-                 <ImageIcon className="text-muted-foreground/40 h-16 w-16" />
-               )}
-               
-               {/* Overlay for better visibility of image boundary */}
-               <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-xl pointer-events-none" />
+          <div className="flex flex-col items-center justify-center text-center p-8 space-y-6">
+            <div className={`
+              p-6 rounded-full transition-all duration-300
+              ${isDragActive ? 'bg-primary/10 text-primary scale-110' : 'bg-secondary text-muted-foreground group-hover:scale-105 group-hover:bg-secondary/80'}
+              ${error ? 'bg-destructive/10 text-destructive' : ''}
+            `}>
+              {error ? (
+                <AlertCircle className="w-10 h-10" />
+              ) : isDragActive ? (
+                <UploadCloud className="w-10 h-10 animate-bounce" />
+              ) : (
+                <ImageIcon className="w-10 h-10" />
+              )}
             </div>
-            
-            <div className="flex items-center justify-between p-4 bg-card border-t">
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className="flex-shrink-0 p-2.5 bg-primary/10 rounded-lg text-primary">
-                  <FileUp size={20} strokeWidth={2} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate text-foreground">{selectedFile.name}</p>
-                  <p className="text-xs text-muted-foreground font-medium">
-                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                  </p>
-                </div>
-              </div>
-              
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={onClear}
-                disabled={disabled}
-                className="h-9 w-9 p-0 rounded-full text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/5 transition-colors"
-                aria-label="Remove selected image"
-              >
-                <X size={16} />
-              </Button>
+
+            <div className="space-y-2">
+              <p className="text-xl font-semibold text-foreground tracking-tight">
+                {isDragActive ? "Drop to upload" : "Upload plant image"}
+              </p>
+              <p id="upload-hint" className="text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed">
+                Drag and drop or click to browse.<br/>
+                Supports JPG, PNG, WebP up to 10MB.
+              </p>
             </div>
-          </motion.div>
+
+            <Button 
+              variant={isDragActive ? "primary" : "secondary"}
+              className="mt-2 pointer-events-none" // Button is visual only, parent div handles click
+              tabIndex={-1}
+            >
+              Select Image
+            </Button>
+          </div>
         )}
-      </AnimatePresence>
+      </div>
+
+      {error && (
+        <div 
+          role="alert" 
+          className="flex items-center gap-3 p-4 text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded-xl animate-in slide-in-from-top-2"
+        >
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span className="font-medium">{error}</span>
+        </div>
+      )}
     </div>
   );
 };
-
-export default React.memo(FileUpload);
