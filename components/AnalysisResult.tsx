@@ -46,12 +46,18 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   // Only matters if we haven't already blocked it via domain check.
   const hasEnoughConfidence = cropConfidence >= UI_MIN_CROP_CONFIDENCE;
 
-  // FINAL DECISION
+  // FINAL DECISION - Hard Block
   // We block if:
   // A) Metadata is ready AND it's not a trained crop (Domain Block)
   // OR
   // B) Confidence is too low (Quality Block)
   const isUnsupportedImage = (!isTrained && metadataReady) || !hasEnoughConfidence;
+
+  // AMBIGUITY DETECTION
+  // For predictions that pass validation but have borderline confidence.
+  // Real crops typically score ~1.00, non-crops ~0.96
+  // This threshold creates a narrow band where we show a disclaimer instead of blocking.
+  const isAmbiguousPrediction = cropConfidence < 0.98;
 
   // UNSUPPORTED IMAGE STATE - Full replacement, no degraded results
   if (isUnsupportedImage) {
@@ -151,6 +157,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               <h2 className="text-4xl sm:text-5xl font-bold tracking-tighter text-foreground leading-tight">
                 {cropInfo.displayName}
               </h2>
+              
+              {/* AMBIGUITY DISCLAIMER - Shown for borderline confidence */}
+              {isAmbiguousPrediction && (
+                <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+                  This result may be inaccurate if the image is not a clear crop leaf.
+                </p>
+              )}
+              
               {cropInfo.description && (
                 <p className="text-muted-foreground text-sm mt-2 leading-relaxed max-w-md">
                   {cropInfo.description}
