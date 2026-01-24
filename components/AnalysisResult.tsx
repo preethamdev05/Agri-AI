@@ -26,22 +26,23 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     }
   }, [result]);
 
-  // Debug logging
-  console.log('[AnalysisResult] Crop:', result.crop?.label, 'Confidence:', result.crop?.confidence);
-  console.log('[AnalysisResult] Metadata available:', !!metadataLookup);
-  console.log('[AnalysisResult] Threshold:', UI_MIN_CROP_CONFIDENCE);
-
   // UI GUARDRAIL: Block rendering if image is not a trained crop
-  // Only check metadata if lookup is available (graceful degradation)
+  // Strategy:
+  // 1. Always require valid crop data and minimum confidence
+  // 2. For high confidence (>=70%), trust the model regardless of metadata
+  // 3. For medium confidence (30-70%), validate against metadata if available
   const hasValidCrop = result.crop && result.crop.label;
-  const meetsConfidence = result.crop && result.crop.confidence >= UI_MIN_CROP_CONFIDENCE;
-  const isKnown = !metadataLookup || isKnownCrop(result.crop?.label || '', metadataLookup);
+  const confidence = result.crop?.confidence || 0;
+  const meetsMinConfidence = confidence >= UI_MIN_CROP_CONFIDENCE;
+  const isHighConfidence = confidence >= 0.70; // 70% or higher - trust it
   
-  console.log('[AnalysisResult] Guard checks - hasValidCrop:', hasValidCrop, 'meetsConfidence:', meetsConfidence, 'isKnown:', isKnown);
+  // Only check metadata for medium confidence predictions
+  const needsMetadataCheck = !isHighConfidence && metadataLookup;
+  const isKnown = needsMetadataCheck 
+    ? isKnownCrop(result.crop?.label || '', metadataLookup) 
+    : true; // Bypass check for high confidence or no metadata
   
-  const isUnsupportedImage = !hasValidCrop || !meetsConfidence || !isKnown;
-  
-  console.log('[AnalysisResult] Final decision - isUnsupportedImage:', isUnsupportedImage);
+  const isUnsupportedImage = !hasValidCrop || !meetsMinConfidence || !isKnown;
 
   // UNSUPPORTED IMAGE STATE - Full replacement, no degraded results
   if (isUnsupportedImage) {
@@ -76,14 +77,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               <p className="text-xs text-muted-foreground mt-3 italic">
                 Avoid screenshots, webpages, people, or non-plant objects.
               </p>
-            </div>
-
-            {/* Debug Info (temporary) */}
-            <div className="text-xs text-muted-foreground bg-slate-100 dark:bg-slate-900 rounded p-3 font-mono text-left w-full">
-              <div>Crop: {result.crop?.label || 'null'}</div>
-              <div>Confidence: {result.crop?.confidence?.toFixed(3) || 'null'}</div>
-              <div>Threshold: {UI_MIN_CROP_CONFIDENCE}</div>
-              <div>Metadata: {metadataLookup ? 'loaded' : 'unavailable'}</div>
             </div>
 
             {/* Action Button */}
