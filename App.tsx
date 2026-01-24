@@ -1,331 +1,166 @@
-import React, { useState, useEffect, Suspense, useCallback } from 'react';
-import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query';
-import { WifiOff, AlertCircle, Sprout, Sun, Moon, Loader2, History } from 'lucide-react';
-import { checkHealth, analyzeImage } from './services/api';
-import { compressImage } from './utils/imageOptimizer';
-import { mapApiErrorToMessage } from './utils/errorMapper';
-import { ThemeProvider, useTheme } from './components/ThemeProvider';
-import { I18nProvider, useI18n } from './components/I18nProvider';
-import { ToastProvider, useToast } from './components/ui/Toast';
-import FileUpload from './components/FileUpload';
-import Button from './components/ui/Button';
-import MetadataViewer from './components/MetadataViewer';
-import EmptyState from './components/ui/EmptyState';
-import Skeleton from './components/ui/Skeleton';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, Suspense, useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
+import { Sprout, BarChart3, Info } from 'lucide-react';
+import { FileUpload } from './components/FileUpload';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { Skeleton } from './components/ui/Skeleton';
+import { Toast } from './components/ui/Toast';
+import { analyzeImage, checkHealth } from './services/api';
+import type { PredictResponse } from './types';
 
 // Lazy load heavy result component
-const AnalysisResult = React.lazy(() => import('./components/AnalysisResult'));
+const AnalysisResult = React.lazy(() => 
+  import('./components/AnalysisResult').then(module => ({ default: module.AnalysisResult }))
+);
 
-// Register Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(error => {
-      console.warn('SW registration failed:', error);
-    });
-  });
-}
+function App() {
+  const [result, setResult] = useState<PredictResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<boolean | null>(null);
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
-
-function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className="h-9 w-9 p-0 rounded-full border-border/50 hover:bg-muted"
-      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-    >
-      <div className="relative h-4 w-4">
-        <Sun className="absolute inset-0 h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-        <Moon className="absolute inset-0 h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-      </div>
-    </Button>
-  );
-}
-
-function LangToggle() {
-  const { language, setLanguage } = useI18n();
-  const nextLang = language === 'en' ? 'es' : language === 'es' ? 'hi' : 'en';
-  
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => setLanguage(nextLang)}
-      className="h-9 w-12 rounded-full border-border/50 text-xs font-bold"
-      aria-label={`Switch language to ${nextLang.toUpperCase()}`}
-    >
-      {language.toUpperCase()}
-    </Button>
-  );
-}
-
-function AgriScanApp() {
-  const { t } = useI18n();
-  const { addToast } = useToast();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [loadingStep, setLoadingStep] = useState<string | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
-  
-  // 1. Health Check
-  const { data: isServiceAvailable, isLoading: isHealthLoading } = useQuery({
-    queryKey: ['health'],
-    queryFn: checkHealth,
-    refetchInterval: 30000,
-  });
-
-  // Cleanup effect
   useEffect(() => {
+    checkHealth().then(setHealthStatus);
+    
+    // Cleanup object URLs on unmount
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      // Logic handled in FileUpload but good practice to ensure clean exits
     };
-  }, [previewUrl]);
+  }, []);
 
-  // 2. Analysis Mutation with Stepped Loading
-  const analysisMutation = useMutation({
-    mutationFn: async (file: File) => {
-      try {
-        setLoadingStep(t('btn.optimizing'));
-        const compressedFile = await compressImage(file);
-        
-        setLoadingStep(t('btn.uploading'));
-        const result = await analyzeImage(compressedFile);
-        
-        setLoadingStep(t('btn.processing'));
-        // Save to history (mock)
-        const historyItem = { date: new Date().toISOString(), result };
-        const history = JSON.parse(localStorage.getItem('scan_history') || '[]');
-        localStorage.setItem('scan_history', JSON.stringify([historyItem, ...history].slice(0, 10)));
-        
-        return result;
-      } finally {
-        setLoadingStep(null);
-      }
-    },
-    onSuccess: () => {
-       addToast("Analysis complete!", "success");
-    },
-    onError: (error) => {
-      const { message, severity } = mapApiErrorToMessage(error);
-      if (severity === 'warning') {
-         addToast(message, 'info');
-      }
+  const handleFileSelect = async (file: File) => {
+    setLoading(true);
+    try {
+      const data = await analyzeImage(file);
+      setResult(data);
+    } catch (error) {
+      console.error(error);
+      Toast({ 
+        title: "Analysis Failed", 
+        message: error instanceof Error ? error.message : "Unknown error", 
+        type: "error" 
+      });
+    } finally {
+      setLoading(false);
     }
-  });
+  };
 
-  // Optimized: Memoized handlers to prevent child re-renders during background health checks
-  const handleFileSelect = useCallback((file: File) => {
-    setSelectedFile(file);
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    analysisMutation.reset();
-  }, [analysisMutation.reset]);
-
-  const handleClear = useCallback(() => {
-    setSelectedFile(null);
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(null);
-    analysisMutation.reset();
-  }, [previewUrl, analysisMutation.reset]);
-
-  const handleAnalyze = useCallback(() => {
-    if (selectedFile) {
-      analysisMutation.mutate(selectedFile);
-    }
-  }, [selectedFile, analysisMutation.mutate]);
+  const handleClear = () => {
+    setResult(null);
+  };
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20 transition-colors duration-300 flex flex-col">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
+      <Toaster position="bottom-center" />
       
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto max-w-5xl px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-primary/10 text-primary">
-              <Sprout size={20} strokeWidth={2.5} />
+      <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 group cursor-default">
+            <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition-colors">
+              <Sprout className="w-6 h-6 text-primary" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight leading-none">{t('app.title')}</h1>
-              <p className="text-[10px] text-muted-foreground font-medium tracking-wider uppercase mt-0.5">{t('app.subtitle')}</p>
-            </div>
+            <h1 className="text-xl font-bold tracking-tight">Agri-AI</h1>
           </div>
-
-          <div className="flex items-center gap-2">
-             <LangToggle />
-             <ThemeToggle />
-            {isHealthLoading ? (
-              <Skeleton className="h-6 w-20 rounded-full" />
-            ) : isServiceAvailable ? (
-              <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-100 dark:border-emerald-500/20 shadow-sm transition-colors">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span className="hidden sm:inline">{t('status.online')}</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-destructive/5 px-3 py-1.5 rounded-full border border-destructive/10 shadow-sm">
-                <WifiOff size={12} />
-                <span>{t('status.offline')}</span>
+          
+          <div className="flex items-center gap-4">
+            {healthStatus !== null && (
+              <div 
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
+                  healthStatus 
+                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
+                    : 'bg-red-500/10 text-red-600 border-red-500/20'
+                }`}
+                title={healthStatus ? "System Operational" : "System Offline"}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${healthStatus ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                {healthStatus ? 'Online' : 'Offline'}
               </div>
             )}
+            
+            <a 
+              href="https://github.com/preethamdev05/Agri-AI" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="View Source on GitHub"
+            >
+              <Info className="w-5 h-5" />
+            </a>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 container mx-auto max-w-2xl px-4 py-12 space-y-8" role="main">
-        
-        <div className="text-center space-y-2 mb-8">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{t('hero.title')}</h2>
-          <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-            {t('hero.desc')}
-          </p>
-        </div>
-
-        <AnimatePresence mode="wait">
-          {!analysisMutation.data ? (
-            <motion.div 
-              key="upload-section"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-6"
-            >
-              <div className="bg-card rounded-xl border shadow-sm p-1.5 transition-shadow hover:shadow-md">
-                <FileUpload 
-                  onFileSelect={handleFileSelect} 
-                  onClear={handleClear} 
-                  selectedFile={selectedFile}
-                  previewUrl={previewUrl}
-                  disabled={analysisMutation.isPending}
-                />
+      <main className="container mx-auto px-4 py-8 md:py-12 lg:py-16 max-w-4xl" role="main">
+        <ErrorBoundary>
+          <div className="space-y-12">
+            
+            {/* Hero Section (Only show when no result) */}
+            {!result && (
+              <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight lg:text-6xl text-balance">
+                  Instant Plant <span className="text-primary">Health Analysis</span>
+                </h2>
+                <p className="text-lg text-muted-foreground max-w-2xl mx-auto text-balance leading-relaxed">
+                  Upload a photo of your crop to instantly identify diseases, verify health status, 
+                  and get detailed confidence metrics powered by deep learning.
+                </p>
               </div>
+            )}
 
-              {/* Action Bar */}
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                 <Button 
-                   size="lg"
-                   variant="primary"
-                   className="w-full shadow-sm hover:shadow-md transition-all h-14 text-base font-semibold rounded-xl relative overflow-hidden"
-                   onClick={handleAnalyze} 
-                   disabled={!selectedFile || analysisMutation.isPending}
-                   aria-busy={analysisMutation.isPending}
-                 >
-                   {analysisMutation.isPending ? (
-                     <div className="flex items-center gap-2">
-                       <Loader2 className="h-5 w-5 animate-spin" />
-                       <span>{loadingStep || t('btn.analyzing')}</span>
-                     </div>
-                   ) : (
-                     t('btn.upload')
-                   )}
-                 </Button>
-              </div>
-
-              {/* Error State */}
-              {analysisMutation.isError && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="pt-2"
-                >
-                  <EmptyState 
-                    icon={AlertCircle}
-                    title="Analysis Failed"
-                    description={mapApiErrorToMessage(analysisMutation.error).message}
-                    actionLabel="Retry Analysis"
-                    onAction={handleAnalyze}
-                  />
-                </motion.div>
-              )}
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="results-section"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", duration: 0.5 }}
-              className="space-y-6"
-            >
-              <Suspense fallback={
-                <div className="space-y-6">
-                  <Skeleton className="h-64 w-full rounded-2xl" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <Skeleton className="h-32 rounded-xl" />
-                    <Skeleton className="h-32 rounded-xl" />
+            {/* Interactive Area */}
+            <div className="relative min-h-[400px]">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-20 space-y-6 animate-in fade-in duration-300">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
+                    <BarChart3 className="w-16 h-16 text-primary relative z-10 animate-bounce" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-semibold">Analyzing Image...</h3>
+                    <p className="text-muted-foreground">Running inference models on your crop</p>
+                  </div>
+                  <div className="w-full max-w-xs space-y-2">
+                    <Skeleton className="h-2 w-full bg-primary/20" />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Preprocessing</span>
+                      <span>Inference</span>
+                    </div>
                   </div>
                 </div>
-              }>
-                <AnalysisResult 
-                  data={analysisMutation.data} 
-                  onRetry={handleClear} 
-                />
-              </Suspense>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        
-        {/* History Toggle */}
-        <div className="flex justify-center pt-8 border-t">
-             <button 
-               onClick={() => setShowHistory(!showHistory)}
-               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-               aria-expanded={showHistory}
-             >
-               <History size={16} />
-               <span>{showHistory ? 'Hide History' : t('history.title')}</span>
-             </button>
-        </div>
-        
-        {showHistory && (
-           <div className="space-y-2 animate-in slide-in-from-bottom-2 fade-in">
-              <p className="text-center text-xs text-muted-foreground italic">{t('history.empty')}</p>
-           </div>
-        )}
-
-      </main>
-
-      {/* Footer */}
-      <footer className="mt-auto border-t bg-card/30" role="contentinfo">
-        <div className="container mx-auto px-4 py-10">
-          <div className="max-w-2xl mx-auto space-y-6 text-center">
-            <MetadataViewer />
-            <div className="pt-4 border-t border-border/50">
-               <p className="text-xs text-muted-foreground">
-                &copy; {new Date().getFullYear()} AgriScan AI. 
-                <span className="mx-2">•</span>
-                v2.7.0-prod
-              </p>
+              ) : result ? (
+                <Suspense fallback={<div className="p-8 space-y-4"><Skeleton className="h-64 w-full rounded-2xl" /></div>}>
+                  <AnalysisResult result={result} onClear={handleClear} />
+                </Suspense>
+              ) : (
+                <div className="bg-card rounded-3xl border shadow-sm p-1">
+                  <div className="bg-background/50 rounded-[22px] p-6 md:p-8 backdrop-blur-sm">
+                    <FileUpload onFileSelect={handleFileSelect} isLoading={loading} />
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Features Footer (Only when idle) */}
+            {!result && !loading && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t">
+                {[
+                  { title: "Real-time Inference", desc: "Get results in milliseconds powered by optimized TF models." },
+                  { title: "Offline Capable", desc: "Progressive Web App support for field usage." },
+                  { title: "Privacy First", desc: "Images are processed securely and never shared." }
+                ].map((feature, i) => (
+                  <div key={i} className="space-y-2">
+                    <h3 className="font-semibold text-foreground">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground">{feature.desc}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      </footer>
+        </ErrorBoundary>
+      </main>
     </div>
   );
 }
 
-export default function App() {
-  return (
-    <I18nProvider>
-      <ThemeProvider defaultTheme="system" storageKey="agri-scan-theme">
-        <ToastProvider>
-           <QueryClientProvider client={queryClient}>
-             <AgriScanApp />
-           </QueryClientProvider>
-        </ToastProvider>
-      </ThemeProvider>
-    </I18nProvider>
-  );
-}
+export default App;
