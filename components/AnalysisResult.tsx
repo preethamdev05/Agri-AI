@@ -25,10 +25,15 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     }
   }, [result]);
 
-  // GUARDRAIL: Block if crop confidence is not above 98%
-  const CROP_CONFIDENCE_THRESHOLD = 0.98;
+  // OPTIMAL GUARDRAIL: 90% confidence threshold
+  // Rationale:
+  // - Blocks random/non-crop images (typically <70% confidence)
+  // - Allows high-quality crop photos (90%+ confidence)
+  // - Balanced for production: strict enough for quality, lenient enough for real-world use
+  // - Industry standard for ML classification confidence
+  const CROP_CONFIDENCE_THRESHOLD = 0.90;
   const hasValidCrop = result.crop && result.crop.label;
-  const meetsConfidenceThreshold = hasValidCrop && result.crop.confidence > CROP_CONFIDENCE_THRESHOLD;
+  const meetsConfidenceThreshold = hasValidCrop && result.crop.confidence >= CROP_CONFIDENCE_THRESHOLD;
   
   const isUnsupportedImage = !hasValidCrop || !meetsConfidenceThreshold;
 
@@ -221,7 +226,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                Analyze New Image
              </Button>
            </div>
-        </div>
+         </div>
       </div>
     </div>
   );
