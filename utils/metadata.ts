@@ -32,6 +32,15 @@ export const initTrainedCrops = (crops: CropMetadata[] | null) => {
   trainedCrops = crops
     ? new Set(crops.map(c => c.label.toLowerCase()))
     : null;
+  
+  // DEBUG LOGGING
+  console.log('[METADATA-INIT] initTrainedCrops called');
+  console.log('[METADATA-INIT] Crops array length:', crops?.length ?? 'null');
+  console.log('[METADATA-INIT] trainedCrops Set size:', trainedCrops?.size ?? 'null');
+  if (trainedCrops && trainedCrops.size > 0) {
+    const samples = Array.from(trainedCrops).slice(0, 5);
+    console.log('[METADATA-INIT] Sample crop labels:', samples);
+  }
 };
 
 /**
@@ -39,7 +48,9 @@ export const initTrainedCrops = (crops: CropMetadata[] | null) => {
  * Used to implement "fail open" logic if metadata is missing.
  */
 export const hasTrainedCropMetadata = (): boolean => {
-  return trainedCrops !== null && trainedCrops.size > 0;
+  const hasMetadata = trainedCrops !== null && trainedCrops.size > 0;
+  console.log('[METADATA-CHECK] hasTrainedCropMetadata():', hasMetadata, '| size:', trainedCrops?.size ?? 'null');
+  return hasMetadata;
 };
 
 /**
@@ -80,13 +91,23 @@ export class MetadataLookup {
   private healthMap: Map<string, DisplayInfo>;
 
   constructor(metadata: MetadataResponse | null) {
+    // DEBUG LOGGING
+    console.log('[METADATA-LOOKUP] Constructor called');
+    console.log('[METADATA-LOOKUP] Metadata provided:', metadata ? 'YES' : 'NO');
+    
     this.cropMap = metadata ? buildLookupMap(metadata.crops) : new Map();
     this.diseaseMap = metadata ? buildLookupMap(metadata.diseases) : new Map();
     this.healthMap = metadata ? buildLookupMap(metadata.health_statuses) : new Map();
     
+    console.log('[METADATA-LOOKUP] CropMap size:', this.cropMap.size);
+    console.log('[METADATA-LOOKUP] DiseaseMap size:', this.diseaseMap.size);
+    console.log('[METADATA-LOOKUP] HealthMap size:', this.healthMap.size);
+    
     // Also initialize the global whitelist if we have metadata
     if (metadata && metadata.crops) {
        initTrainedCrops(metadata.crops);
+    } else {
+      console.warn('[METADATA-LOOKUP] No crops in metadata - whitelist NOT initialized');
     }
   }
 
@@ -150,20 +171,12 @@ export const createMetadataLookup = (metadata: MetadataResponse | null): Metadat
  * @returns true only if label exists in trained metadata
  */
 export const isKnownCrop = (label: string | undefined | null): boolean => {
-  if (!label || !trainedCrops) return false;
+  if (!label || !trainedCrops) {
+    console.log('[METADATA-KNOWN]', label ?? 'null', '-> FALSE (no label or trainedCrops null)');
+    return false;
+  }
   
-  // Normalize key to match map behavior
-  const key = normalizeKey(label);
-  
-  // Check against global set (assuming initTrainedCrops used normalized keys or raw?)
-  // The initTrainedCrops uses label.toLowerCase().
-  // normalizeKey uses lowerCase + replace spaces.
-  // We should align them.
-  
-  // Let's rely on simple lowercase check for the global set as defined in initTrainedCrops
-  // But strictly, we should normalize consistently.
-  // The global set uses label.toLowerCase().
-  // So we check label.toLowerCase().
-  
-  return trainedCrops.has(label.toLowerCase());
+  const result = trainedCrops.has(label.toLowerCase());
+  console.log('[METADATA-KNOWN]', label, '-> ', result);
+  return result;
 };
