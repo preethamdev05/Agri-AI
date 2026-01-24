@@ -16,6 +16,14 @@ import { PredictResponse } from '../types';
 const NEGATIVE_CLASS_LABEL = 'healthy';
 
 /**
+ * UI-only confidence floor for crop predictions.
+ * This is NOT a model threshold - it's a presentation guard.
+ * Results below this threshold trigger the unsupported image UI.
+ * Does NOT affect backend inference.
+ */
+export const UI_MIN_CROP_CONFIDENCE = 0.55;
+
+/**
  * Determines if a prediction result indicates a healthy plant.
  * Enforces Case-Insensitive comparison as a safety guard.
  */
