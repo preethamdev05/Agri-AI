@@ -4,7 +4,7 @@ import { Sprout, BarChart3, Info } from 'lucide-react';
 import { FileUpload } from './components/FileUpload';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Skeleton from './components/ui/Skeleton';
-import { analyzeImage, checkHealth, fetchMetadata } from './services/api';
+import { analyzeImage, checkHealth, fetchMetadata, type HealthResponse } from './services/api';
 import { createMetadataLookup, type MetadataLookup } from './utils/metadata';
 import type { PredictResponse } from './types';
 
@@ -13,18 +13,95 @@ const AnalysisResult = React.lazy(() =>
   import('./components/AnalysisResult').then(module => ({ default: module.AnalysisResult }))
 );
 
+/**
+ * Get health status UI classes.
+ * Differentiates between online, loading, and offline states.
+ */
+const getHealthStatusClasses = (status: HealthResponse): string => {
+  switch(status.status) {
+    case 'ok':
+      return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-700';
+    case 'loading':
+      return 'bg-amber-500/10 text-amber-600 border-amber-500/30 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700';
+    case 'offline':
+      return 'bg-red-500/10 text-red-600 border-red-500/30 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700';
+  }
+};
+
+/**
+ * Get health indicator animation classes.
+ */
+const getHealthIndicatorClasses = (status: HealthResponse): string => {
+  switch(status.status) {
+    case 'ok':
+      return 'bg-emerald-500 animate-pulse';
+    case 'loading':
+      return 'bg-amber-500 animate-bounce';
+    case 'offline':
+      return 'bg-red-500';
+  }
+};
+
+/**
+ * Get human-readable health status text.
+ */
+const getHealthStatusText = (status: HealthResponse): string => {
+  switch(status.status) {
+    case 'ok':
+      return 'Online';
+    case 'loading':
+      return 'Loading...';
+    case 'offline':
+      return 'Offline';
+  }
+};
+
+/**
+ * Get accessibility title for health indicator.
+ */
+const getHealthStatusTitle = (status: HealthResponse): string => {
+  switch(status.status) {
+    case 'ok':
+      return 'System Operational';
+    case 'loading':
+      return 'Model Loading (30-40 seconds)';
+    case 'offline':
+      return 'System Offline';
+  }
+};
+
 function App() {
   const [result, setResult] = useState<PredictResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [healthStatus, setHealthStatus] = useState<boolean | null>(null);
+  const [healthStatus, setHealthStatus] = useState<HealthResponse | null>(null);
   const [metadataLookup, setMetadataLookup] = useState<MetadataLookup | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
 
   useEffect(() => {
-    // Initialize system checks and metadata
+    // Initial health check
     checkHealth().then(setHealthStatus);
     
+    // Poll health every 3 seconds during startup (up to 60 seconds)
+    // This ensures we detect when the model finishes loading
+    let pollCount = 0;
+    const maxPolls = 20; // 20 * 3 seconds = 60 seconds
+    const pollInterval = setInterval(async () => {
+      try {
+        const status = await checkHealth();
+        setHealthStatus(status);
+        
+        // Stop polling once backend is ready or max time reached
+        if (status.ready || pollCount >= maxPolls) {
+          clearInterval(pollInterval);
+        }
+      } catch (error) {
+        console.error('Health check failed:', error);
+      }
+      pollCount++;
+    }, 3000);
+    
     // Fetch metadata for label enrichment (non-blocking)
+    // This can fail gracefully without affecting app functionality
     fetchMetadata()
       .then(metadata => {
         const lookup = createMetadataLookup(metadata);
@@ -36,9 +113,9 @@ function App() {
         setMetadataLookup(createMetadataLookup(null));
       });
     
-    // Cleanup object URLs on unmount
+    // Cleanup on unmount
     return () => {
-      // Logic handled in FileUpload but good practice to ensure clean exits
+      clearInterval(pollInterval);
     };
   }, []);
 
@@ -84,17 +161,16 @@ function App() {
           </div>
           
           <div className="flex items-center gap-4">
+            {/* Health Status Indicator */}
             {healthStatus !== null && (
               <div 
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border-2 shadow-sm transition-all ${
-                  healthStatus 
-                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-700' 
-                    : 'bg-red-500/10 text-red-600 border-red-500/30 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700'
+                  getHealthStatusClasses(healthStatus)
                 }`}
-                title={healthStatus ? "System Operational" : "System Offline"}
+                title={getHealthStatusTitle(healthStatus)}
               >
-                <div className={`w-2 h-2 rounded-full ${healthStatus ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                {healthStatus ? 'Online' : 'Offline'}
+                <div className={`w-2 h-2 rounded-full ${getHealthIndicatorClasses(healthStatus)}`} />
+                {getHealthStatusText(healthStatus)}
               </div>
             )}
             
