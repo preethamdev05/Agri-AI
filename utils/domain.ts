@@ -2,57 +2,11 @@
  * DOMAIN LOGIC & CONTRACT ENFORCEMENT
  * 
  * This file centralizes all logic derived from the strict backend contract analysis.
- * It serves as the single source of truth for interpreting API responses.
+ * It serves as the single source of truth for formatting API responses.
  * 
- * BACKEND CONTRACTS (DO NOT MODIFY WITHOUT BACKEND SYNC):
- * 1. Health Status: "healthy" (case-insensitive for safety, but strict on semantics)
- * 2. Disease: Nullable. MUST be null if health is "healthy".
- * 3. Confidence: Float [0, 1].
+ * NO STATE INFERENCE PERMITTED.
+ * State must be derived explicitly from health.status.
  */
-
-import { PredictResponse } from '../types';
-
-// Strict constants from backend config analysis
-const NEGATIVE_CLASS_STATUS = 'healthy';
-
-/**
- * SECONDARY UI GUARD: Minimum crop confidence for display.
- * This is a display-only sanity floor applied AFTER domain validation.
- * 
- * This does NOT alter inference - the backend decides predictions.
- * This prevents showing results when confidence is suspiciously low.
- * 
- * Value Rationale (0.50):
- * - Real crop images often show 0.60-0.85 confidence after mobile compression
- * - 0.50 accounts for edge cases while still filtering obvious misclassifications
- * - Combined with metadata whitelist, this is a safe secondary gate
- * 
- * Order of checks in UI:
- * 1. FIRST: Is crop label in trained metadata? (domain validation)
- * 2. SECOND: Is confidence >= UI_MIN_CROP_CONFIDENCE? (sanity check)
- */
-export const UI_MIN_CROP_CONFIDENCE = 0.50;
-
-/**
- * Determines if a prediction result indicates a healthy plant.
- * Enforces Case-Insensitive comparison as a safety guard.
- */
-export const isPlantHealthy = (healthStatus: string): boolean => {
-  return healthStatus.toLowerCase() === NEGATIVE_CLASS_STATUS;
-};
-
-/**
- * Safely extracts disease information respecting the contract:
- * Disease info is only valid if the plant is NOT healthy.
- * 
- * @returns The disease object or null if healthy/undefined.
- */
-export const getActiveDisease = (data: PredictResponse) => {
-  if (isPlantHealthy(data.health.status)) {
-    return null;
-  }
-  return data.disease || null;
-};
 
 /**
  * Formats confidence as a percentage string.
