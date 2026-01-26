@@ -25,38 +25,65 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     }
   }, [result]);
 
+  // 1. NON_CROP HANDLING (CRITICAL PRIORITY)
+  // Strict backend signal for non-plant images.
+  if (result.crop.label === "NON_CROP") {
+    return (
+      <div ref={scrollRef} className="w-full max-w-4xl mx-auto space-y-6 fade-in-up">
+        <div className="relative overflow-hidden rounded-3xl border-2 p-8 shadow-lg bg-gradient-to-br from-slate-50 to-white border-slate-200 dark:from-slate-950/50 dark:to-background dark:border-slate-800">
+          <div className="flex flex-col items-center text-center space-y-6 max-w-lg mx-auto">
+            {/* Icon */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-slate-300/30 dark:bg-slate-700/30 blur-2xl rounded-full" />
+              <div className="relative bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 p-6 rounded-full border-2 border-slate-200/50 dark:border-slate-700/50">
+                <ImageOff className="w-12 h-12 text-slate-600 dark:text-slate-400" />
+              </div>
+            </div>
+
+            {/* Primary Message */}
+            <div className="space-y-3">
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+                No plant detected
+              </h2>
+              <p className="text-muted-foreground text-base leading-relaxed">
+                The analysis indicates this image does not contain a supported crop leaf. Please upload a clear photo of a plant.
+              </p>
+            </div>
+
+            {/* Action Button */}
+            <Button 
+              variant="outline" 
+              onClick={onClear} 
+              className="w-full sm:w-auto mt-2 hover:bg-primary hover:text-white transition-colors"
+            >
+              Upload a Different Image
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // TWO-STAGE DOMAIN VALIDATION GUARD (SAFE FALLBACK)
   
   const cropLabel = result.crop?.label;
   const cropConfidence = result.crop?.confidence ?? 0;
 
   // CHECK 1: Is metadata available to perform validation?
-  // If not, we "fail open" (allow logic to proceed based on confidence only)
-  // This prevents bricking the UI if metadata fails to load.
   const metadataReady = hasTrainedCropMetadata();
 
   // CHECK 2: Primary Domain Gate
-  // If metadata is ready, we strictly enforce the whitelist.
-  // If metadata is NOT ready, we assume true (fallback).
   const isTrained = metadataReady
     ? isKnownCrop(cropLabel)
     : true; 
 
   // CHECK 3: Secondary Confidence Gate
-  // Only matters if we haven't already blocked it via domain check.
   const hasEnoughConfidence = cropConfidence >= UI_MIN_CROP_CONFIDENCE;
 
   // FINAL DECISION - Hard Block
-  // We block if:
-  // A) Metadata is ready AND it's not a trained crop (Domain Block)
-  // OR
-  // B) Confidence is too low (Quality Block)
   const isUnsupportedImage = (!isTrained && metadataReady) || !hasEnoughConfidence;
 
   // AMBIGUITY DETECTION
-  // For predictions that pass validation but have borderline confidence.
-  // Real crops typically score ~1.00, non-crops ~0.96
-  // This threshold creates a narrow band where we show a disclaimer instead of blocking.
   const isAmbiguousPrediction = cropConfidence < 0.98;
 
   // UNSUPPORTED IMAGE STATE - Full replacement, no degraded results
@@ -89,9 +116,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Tomato leaf, potato leaf, pepper leaf, and similar agricultural crops.
               </p>
-              <p className="text-xs text-muted-foreground mt-3 italic">
-                Avoid screenshots, webpages, people, or non-plant objects.
-              </p>
             </div>
 
             {/* Action Button */}
@@ -111,7 +135,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   // NORMAL FLOW - Valid crop prediction
   // Only reached if guard passes.
   
-  const healthy = isPlantHealthy(result.health.label);
+  // Update: use health.status
+  const healthy = isPlantHealthy(result.health.status);
   const activeDisease = getActiveDisease(result);
   
   // Get enriched display names via metadata lookup (with fallback)
@@ -192,7 +217,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               <div className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border-2 border-emerald-500/20 dark:border-emerald-700/40 shadow-sm backdrop-blur-sm">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-sm font-semibold text-foreground tabular-nums">
-                  {formatConfidence(result.health.confidence)}
+                  {/* Update: use health.probability */}
+                  {formatConfidence(result.health.probability)}
                 </span>
                 <span className="text-xs text-muted-foreground">confidence</span>
               </div>
@@ -233,7 +259,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <div className="space-y-5">
              <ProgressBar 
                label="Health Detection" 
-               value={result.health.confidence} 
+               // Update: use health.probability
+               value={result.health.probability} 
                colorClass={healthy ? "bg-emerald-500" : "bg-amber-500"} 
              />
              
