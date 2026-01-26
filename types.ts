@@ -14,7 +14,6 @@ import { z } from 'zod';
 export const SemanticClassSchema = z.object({
   id: z.string(),
   label: z.string(),
-  // Backend code does not currently populate description, but schema allows it.
   description: z.string().optional(),
 });
 
@@ -32,9 +31,7 @@ export type MetadataResponse = z.infer<typeof MetadataResponseSchema>;
 
 export const PredictionConfidenceSchema = z.object({
   label: z.string(),
-  // STRICT CONSTRAINT: Backend must return float [0, 1].
   confidence: z.number().min(0).max(1),
-  // Optional field backend may return but frontend ignores
   class_id: z.string().optional(),
 });
 
@@ -47,8 +44,9 @@ export const HealthPredictionSchema = z.object({
 export const PredictResponseSchema = z.object({
   health: HealthPredictionSchema,
   crop: PredictionConfidenceSchema,
-  // STRICT CONSTRAINT: disease must be null if health is "Healthy"
-  disease: PredictionConfidenceSchema.nullable().optional(),
+  // STRICT CONSTRAINT: disease must be null unless health.status === "diseased"
+  // It is nullable, but NOT optional. It must be present in the JSON.
+  disease: PredictionConfidenceSchema.nullable(),
   processing_time_ms: z.number().optional(),
 });
 
