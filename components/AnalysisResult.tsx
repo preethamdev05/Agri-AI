@@ -3,22 +3,19 @@ import { CheckCircle2, AlertTriangle, Leaf, Activity, Info, ImageOff } from 'luc
 import ProgressBar from './ui/ProgressBar';
 import { formatConfidence } from '../utils/domain';
 import type { PredictResponse } from '../types';
-import { MetadataLookup } from '../utils/metadata';
 import { Button } from './ui/Button';
 
 interface AnalysisResultProps {
   result: PredictResponse;
   onClear: () => void;
-  metadataLookup?: MetadataLookup;
 }
 
-export const AnalysisResult: React.FC<AnalysisResultProps> = ({ 
-  result, 
+export const AnalysisResult: React.FC<AnalysisResultProps> = ({
+  result,
   onClear,
-  metadataLookup 
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -47,9 +44,9 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               </p>
             </div>
 
-            <Button 
-              variant="outline" 
-              onClick={onClear} 
+            <Button
+              variant="outline"
+              onClick={onClear}
               className="w-full sm:w-auto mt-2 hover:bg-primary hover:text-white transition-colors"
             >
               Upload a Different Image
@@ -60,10 +57,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     );
   }
 
-  // Shared display name fallback
-  const cropInfo = metadataLookup 
-    ? metadataLookup.getCropInfo(result.crop.label)
-    : { displayName: result.crop.label.replace(/_/g, ' ') };
+  // Backend is authoritative: labels are already sanitized.
+  const cropLabel = result.crop.label;
 
   // 2) HEALTHY STATE (authoritative)
   if (result.health.status === 'healthy') {
@@ -80,7 +75,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5 font-medium">Crop identified</p>
                 <h2 className="text-4xl sm:text-5xl font-bold tracking-tighter text-foreground leading-tight">
-                  {cropInfo.displayName}
+                  {cropLabel}
                 </h2>
               </div>
 
@@ -125,15 +120,15 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             </div>
 
             <div className="space-y-5">
-              <ProgressBar 
-                label="Health Detection" 
-                value={result.health.probability} 
-                colorClass="bg-emerald-500" 
+              <ProgressBar
+                label="Health Detection"
+                value={result.health.probability}
+                colorClass="bg-emerald-500"
               />
-              <ProgressBar 
-                label="Crop Identification" 
-                value={result.crop.confidence} 
-                colorClass="bg-blue-500" 
+              <ProgressBar
+                label="Crop Identification"
+                value={result.crop.confidence}
+                colorClass="bg-blue-500"
               />
             </div>
           </div>
@@ -159,9 +154,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
   // 3) DISEASED STATE (authoritative): show disease only if status=diseased AND disease != null
   if (result.health.status === 'diseased' && result.disease) {
-    const diseaseInfo = metadataLookup
-      ? metadataLookup.getDiseaseInfo(result.disease.label)
-      : { displayName: result.disease.label.replace(/_/g, ' ') };
+    const diseaseLabel = result.disease.label;
 
     return (
       <div ref={scrollRef} className="w-full max-w-4xl mx-auto space-y-6 fade-in-up">
@@ -176,14 +169,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               <div>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5 font-medium">Crop identified</p>
                 <h2 className="text-4xl sm:text-5xl font-bold tracking-tighter text-foreground leading-tight">
-                  {cropInfo.displayName}
+                  {cropLabel}
                 </h2>
               </div>
 
               <div className="pt-3 border-t border-black/5 dark:border-white/5">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground/60 mb-1.5 font-medium">Disease detected</p>
                 <h3 className="text-2xl font-semibold text-foreground">
-                  {diseaseInfo.displayName}
+                  {diseaseLabel}
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1.5">
                   Confidence: {formatConfidence(result.disease.confidence)}
@@ -231,20 +224,20 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             </div>
 
             <div className="space-y-5">
-              <ProgressBar 
-                label="Health Detection" 
-                value={result.health.probability} 
-                colorClass="bg-amber-500" 
+              <ProgressBar
+                label="Health Detection"
+                value={result.health.probability}
+                colorClass="bg-amber-500"
               />
-              <ProgressBar 
-                label="Crop Identification" 
-                value={result.crop.confidence} 
-                colorClass="bg-blue-500" 
+              <ProgressBar
+                label="Crop Identification"
+                value={result.crop.confidence}
+                colorClass="bg-blue-500"
               />
-              <ProgressBar 
-                label="Disease Classification" 
-                value={result.disease.confidence} 
-                colorClass="bg-red-500" 
+              <ProgressBar
+                label="Disease Classification"
+                value={result.disease.confidence}
+                colorClass="bg-red-500"
               />
             </div>
           </div>
@@ -282,9 +275,9 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             </p>
           </div>
 
-          <Button 
-            variant="outline" 
-            onClick={onClear} 
+          <Button
+            variant="outline"
+            onClick={onClear}
             className="w-full sm:w-auto mt-2 hover:bg-primary hover:text-white transition-colors"
           >
             Analyze New Image

@@ -4,8 +4,7 @@ import { Sprout, BarChart3, Info } from 'lucide-react';
 import { FileUpload } from './components/FileUpload';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Skeleton from './components/ui/Skeleton';
-import { analyzeImage, checkHealth, fetchMetadata, type HealthResponse } from './services/api';
-import { createMetadataLookup, type MetadataLookup } from './utils/metadata';
+import { analyzeImage, checkHealth, type HealthResponse } from './services/api';
 import type { PredictResponse } from './types';
 
 // Lazy load heavy result component
@@ -74,13 +73,12 @@ function App() {
   const [result, setResult] = useState<PredictResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [healthStatus, setHealthStatus] = useState<HealthResponse | null>(null);
-  const [metadataLookup, setMetadataLookup] = useState<MetadataLookup | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
 
   useEffect(() => {
     // Initial health check
     checkHealth().then(setHealthStatus);
-    
+
     // Poll health every 3 seconds during startup (up to 60 seconds)
     // This ensures we detect when the model finishes loading
     let pollCount = 0;
@@ -89,7 +87,7 @@ function App() {
       try {
         const status = await checkHealth();
         setHealthStatus(status);
-        
+
         // Stop polling once backend is ready or max time reached
         if (status.ready || pollCount >= maxPolls) {
           clearInterval(pollInterval);
@@ -99,20 +97,7 @@ function App() {
       }
       pollCount++;
     }, 3000);
-    
-    // Fetch metadata for label enrichment (non-blocking)
-    // This can fail gracefully without affecting app functionality
-    fetchMetadata()
-      .then(metadata => {
-        const lookup = createMetadataLookup(metadata);
-        setMetadataLookup(lookup);
-      })
-      .catch(error => {
-        console.warn('Metadata fetch failed, using fallback labels:', error);
-        // Create empty lookup for graceful degradation
-        setMetadataLookup(createMetadataLookup(null));
-      });
-    
+
     // Cleanup on unmount
     return () => {
       clearInterval(pollInterval);
@@ -144,12 +129,12 @@ function App() {
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">
       <Toaster position="bottom-center" />
-      
+
       {/* Screen reader announcements */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {statusMessage}
       </div>
-      
+
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -159,11 +144,11 @@ function App() {
             </div>
             <h1 className="text-xl font-bold tracking-tight">Agri-AI</h1>
           </div>
-          
+
           <div className="flex items-center gap-4">
             {/* Health Status Indicator */}
             {healthStatus !== null && (
-              <div 
+              <div
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border-2 shadow-sm transition-all ${
                   getHealthStatusClasses(healthStatus)
                 }`}
@@ -173,10 +158,10 @@ function App() {
                 {getHealthStatusText(healthStatus)}
               </div>
             )}
-            
-            <a 
-              href="https://github.com/preethamdev05/Agri-AI" 
-              target="_blank" 
+
+            <a
+              href="https://github.com/preethamdev05/Agri-AI"
+              target="_blank"
               rel="noopener noreferrer"
               className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary"
               aria-label="View Source on GitHub"
@@ -191,7 +176,7 @@ function App() {
       <main className="container mx-auto px-4 py-8 md:py-12 lg:py-16 max-w-4xl" role="main">
         <ErrorBoundary>
           <div className="space-y-12">
-            
+
             {/* Hero Section (Only show when no result) */}
             {!result && (
               <div className="text-center space-y-4 fade-in-up">
@@ -202,7 +187,7 @@ function App() {
                   </span>
                 </h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto text-balance leading-relaxed">
-                  Upload a photo of your crop to instantly identify diseases, verify health status, 
+                  Upload a photo of your crop to instantly identify diseases, verify health status,
                   and get detailed confidence metrics powered by deep learning.
                 </p>
               </div>
@@ -238,10 +223,9 @@ function App() {
                     <Skeleton className="h-64 w-full rounded-3xl" />
                   </div>
                 }>
-                  <AnalysisResult 
-                    result={result} 
+                  <AnalysisResult
+                    result={result}
                     onClear={handleClear}
-                    metadataLookup={metadataLookup || undefined}
                   />
                 </Suspense>
               ) : (
@@ -261,8 +245,8 @@ function App() {
                   { title: "Offline Capable", desc: "Progressive Web App support for field usage." },
                   { title: "Privacy First", desc: "Images are processed securely and never shared." }
                 ].map((feature, i) => (
-                  <div 
-                    key={i} 
+                  <div
+                    key={i}
                     className="space-y-2 p-4 rounded-2xl hover:bg-secondary/50 transition-colors group"
                   >
                     <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{feature.title}</h3>

@@ -8,11 +8,9 @@
  */
 
 import axios from 'axios';
-import { 
-  MetadataResponseSchema, 
-  PredictResponseSchema, 
-  type MetadataResponse, 
-  type PredictResponse 
+import {
+  PredictResponseSchema,
+  type PredictResponse
 } from '../types';
 
 // Health check response type
@@ -67,14 +65,14 @@ export const checkHealth = async (): Promise<HealthResponse> => {
   if (!API_BASE_URL) {
     return { status: 'offline', ready: false };
   }
-  
+
   try {
     const response = await apiClient.get('/health', {
       headers: { 'Accept': 'application/json' },
       // Accept both 200 and 503 - don't reject on 503
       validateStatus: (status) => status < 500
     });
-    
+
     if (response.status === 200) {
       // Backend ready
       return { status: 'ok', ready: true };
@@ -82,24 +80,12 @@ export const checkHealth = async (): Promise<HealthResponse> => {
       // Model loading
       return { status: 'loading', ready: false };
     }
-    
+
     // Unexpected status
     return { status: 'offline', ready: false };
   } catch (error) {
     // Network error or timeout
     return { status: 'offline', ready: false };
-  }
-};
-
-export const fetchMetadata = async (): Promise<MetadataResponse> => {
-  if (!API_BASE_URL) throw new Error("Backend URL not configured");
-  try {
-    const response = await apiClient.get('/metadata/classes', {
-      headers: { 'Accept': 'application/json' }
-    });
-    return MetadataResponseSchema.parse(response.data);
-  } catch (error) {
-    throw normalizeError(error);
   }
 };
 
@@ -111,15 +97,15 @@ export const fetchMetadata = async (): Promise<MetadataResponse> => {
  */
 export const analyzeImage = async (file: File): Promise<PredictResponse> => {
   if (!API_BASE_URL) throw new Error("Backend URL not configured");
-  
+
   const maxRetries = 3;
   let lastError: Error | null = null;
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const formData = new FormData();
-      // STRICT CONTRACT: Field name must be 'image'
-      formData.append('image', file);
+      // STRICT CONTRACT: Field name must be 'file'
+      formData.append('file', file);
 
       const response = await apiClient.post('/predict', formData, {
         headers: {
@@ -144,8 +130,8 @@ export const analyzeImage = async (file: File): Promise<PredictResponse> => {
       return PredictResponseSchema.parse(response.data);
     } catch (error) {
       lastError = normalizeError(error);
-      
-      // Retry on network errors (not on validation errors)
+
+      // Retry on network errors (not on explicit model-loading failure)
       if (attempt < maxRetries && !(error instanceof Error && error.message.includes('Model is still loading'))) {
         console.log(`[Attempt ${attempt}/${maxRetries}] Request failed, retrying in 2 seconds...`);
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -153,6 +139,6 @@ export const analyzeImage = async (file: File): Promise<PredictResponse> => {
       }
     }
   }
-  
+
   throw lastError || new Error("Failed to analyze image after retries");
 };

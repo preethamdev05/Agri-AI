@@ -1,29 +1,10 @@
 /**
  * API CONTRACT TYPES
  * 
- * STRICT SYNC REQUIRED: These types mirror the backend Pydantic schemas.
- * Any changes here must be validated against the backend `schemas.py`.
+ * STRICT SYNC REQUIRED: These types mirror the backend schemas.
  */
 
 import { z } from 'zod';
-
-// ============================================================================
-// METADATA ENDPOINT CONTRACT (/metadata/classes)
-// ============================================================================
-
-export const SemanticClassSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  description: z.string().optional(),
-});
-
-export const MetadataResponseSchema = z.object({
-  crops: z.array(SemanticClassSchema),
-  diseases: z.array(SemanticClassSchema),
-  health_statuses: z.array(SemanticClassSchema),
-});
-
-export type MetadataResponse = z.infer<typeof MetadataResponseSchema>;
 
 // ============================================================================
 // PREDICTION ENDPOINT CONTRACT (/predict)
@@ -32,7 +13,6 @@ export type MetadataResponse = z.infer<typeof MetadataResponseSchema>;
 export const PredictionConfidenceSchema = z.object({
   label: z.string(),
   confidence: z.number().min(0).max(1),
-  class_id: z.string().optional(),
 });
 
 // Schema for Health specifically (Status/Probability)
@@ -42,11 +22,12 @@ export const HealthPredictionSchema = z.object({
 });
 
 export const PredictResponseSchema = z.object({
-  health: HealthPredictionSchema,
   crop: PredictionConfidenceSchema,
+  health: HealthPredictionSchema,
   // STRICT CONSTRAINT: disease must be null unless health.status === "diseased"
   // It is nullable, but NOT optional. It must be present in the JSON.
   disease: PredictionConfidenceSchema.nullable(),
+  // Optional: some deployments may add performance telemetry.
   processing_time_ms: z.number().optional(),
 });
 
