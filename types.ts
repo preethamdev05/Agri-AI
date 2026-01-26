@@ -38,8 +38,14 @@ export const PredictionConfidenceSchema = z.object({
   class_id: z.string().optional(),
 });
 
+// Schema for Health specifically (Status/Probability)
+export const HealthPredictionSchema = z.object({
+  status: z.enum(["diseased", "healthy", "non_crop"]),
+  probability: z.number().min(0).max(1),
+});
+
 export const PredictResponseSchema = z.object({
-  health: PredictionConfidenceSchema,
+  health: HealthPredictionSchema,
   crop: PredictionConfidenceSchema,
   // STRICT CONSTRAINT: disease must be null if health is "Healthy"
   disease: PredictionConfidenceSchema.nullable().optional(),
